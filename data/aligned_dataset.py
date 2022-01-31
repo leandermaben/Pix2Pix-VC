@@ -41,10 +41,11 @@ class AlignedDataset(BaseDataset):
         AB_path = self.AB_paths[index]
         AB = load_pickle_file(AB_path)
         # split AB image into A and B
-        w, h = AB.size
+        h, w = AB.shape
         w2 = int(w / 2)
-        A = AB.crop((0, 0, w2, h))
-        B = AB.crop((w2, 0, w, h))
+        A = AB[:,:w2]
+        B = AB[:,w2:]
+        
 
         # apply the same transform to both A and B
         transform_params = get_params(self.opt, A.size)
