@@ -87,8 +87,8 @@ def preprocess_dataset(data_path, class_id, args):
             
             ##Padding the image
             freq_len,time_len = img.shape
-            top_pad = freq_len % args.size_multiple
-            right_pad = time_len % args.size_multiple 
+            top_pad = args.size_multiple - freq_len % args.size_multiple
+            right_pad = args.size_multiple - time_len % args.size_multiple 
             x_size = time_len+right_pad
             y_size = freq_len+top_pad
             img_padded = np.zeros((y_size,x_size))
