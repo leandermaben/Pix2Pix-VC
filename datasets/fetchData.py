@@ -41,9 +41,6 @@ def mel(wavspath):
             info['duration']+=librosa.get_duration(filename=wavpath)
             info['records_count']+=1   
             filenames.append(file)       
-
-  
-
     return mel_list, filenames, info
 
 

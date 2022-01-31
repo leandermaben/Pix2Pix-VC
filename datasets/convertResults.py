@@ -6,16 +6,37 @@ import torch
 import librosa
 import torchaudio
 import pickle
+from util.util import save_pickle,load_pickle_file
 
 RESULTS_PATH_DEFAULT = '/content/Pix2Pix-VC/results/noise_pix2pix/test_latest/images'
 SAVE_PATH_DEFAULT = '/content/Pix2Pix-VC/data_cache/results' 
 PADDING_PATH_DEFAULT = '/content/Pix2Pix-VC/data_cache/noisy/meta/noisy_padding.pickle'
 SAMPLING_RATE = 22050
 
+def save_results_as_audio_and_spec(real_a,real_b,fake_b,image_path,save_dir):
+    print('*'*25)
+    print(image_path)
+    image_path = os.path.basename(image_path)
+    vocoder = torch.hub.load('descriptinc/melgan-neurips', 'load_melgan')
+    padding = load_pickle_file(PADDING_PATH_DEFAULT)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    imgs = (real_a,real_b,fake_b)
+    suffs = ('real_a','real_b','fake_b')
+    os.makedirs('/content/Pix2Pix-VC/demo',exist_ok=True)
+    for img,suff in zip(imgs,suffs):
+        img=img.squeeze()
+        img=img*0.5+0.5
+        img=img.cpu().numpy()
+        save_pickle(img,f'/content/Pix2Pix-VC/demo/{image_path}_{suff}.pkl')
+        key = image_path[:33]+'.jpg'
+        top_pad,right_pad = padding[key]
+        spec = img[top_pad:,0:img.shape[1]-right_pad]
+        spec =torch.tensor(spec,dtype=torch.float32)
+        rev = vocoder.inverse(spec.unsqueeze(0)).cpu().detach()
+        torchaudio.save(os.path.join(save_dir,image_path[:-4]+suff+'.wav'), rev, sample_rate=SAMPLING_RATE, bits_per_sample=16)
 
-def load_pickle_file(fileName):
-    with open(fileName, 'rb') as f:
-        return pickle.load(f)
+
 
 def get_audio(data_root,padding_path,save_path):
     vocoder = torch.hub.load('descriptinc/melgan-neurips', 'load_melgan')

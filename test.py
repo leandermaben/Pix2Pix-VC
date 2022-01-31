@@ -32,6 +32,7 @@ from data import create_dataset
 from models import create_model
 from util.visualizer import save_images
 from util import html
+from datasets.convertResults import save_results_as_audio_and_spec
 
 try:
     import wandb
@@ -72,6 +73,7 @@ if __name__ == '__main__':
             break
         model.set_input(data)  # unpack data from data loader
         model.test()           # run inference
+        save_results_as_audio_and_spec(model.real_A,model.real_B,model.fake_B,model.image_paths[0],opt.save_dir)
         visuals = model.get_current_visuals()  # get image results
         img_path = model.get_image_paths()     # get image paths
         if i % 5 == 0:  # save images to an HTML file

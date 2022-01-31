@@ -2,8 +2,9 @@ import os
 from data.base_dataset import BaseDataset, get_params, get_transform
 from data.image_folder import make_dataset
 from PIL import Image
-from util.util import load_pickle_file
-
+from util.util import load_pickle_file,save_pickle
+import numpy as np
+import torch
 
 class AlignedDataset(BaseDataset):
     """A dataset class for paired image dataset.
@@ -43,17 +44,22 @@ class AlignedDataset(BaseDataset):
         # split AB image into A and B
         h, w = AB.shape
         w2 = int(w / 2)
-        A = AB[:,:w2]
-        B = AB[:,w2:]
+        A = torch.tensor(AB[:,:w2],dtype=torch.float32).unsqueeze(0)
+        B = torch.tensor(AB[:,w2:],dtype=torch.float32).unsqueeze(0)
         
+        # A = Image.fromarray(AB[:,:w2])
+        # B = Image.fromarray(AB[:,w2:])
 
-        # apply the same transform to both A and B
-        transform_params = get_params(self.opt, A.size)
-        A_transform = get_transform(self.opt, transform_params, grayscale=(self.input_nc == 1))
-        B_transform = get_transform(self.opt, transform_params, grayscale=(self.output_nc == 1))
+        # # apply the same transform to both A and B
+        # transform_params = get_params(self.opt, A.size)
+        # A_transform = get_transform(self.opt, transform_params, grayscale=(self.input_nc == 1))
+        # B_transform = get_transform(self.opt, transform_params, grayscale=(self.output_nc == 1))
 
-        A = A_transform(A)
-        B = B_transform(B)
+        # A = A_transform(A)
+        # B = B_transform(B)
+
+        save_pickle(A.numpy(),'/content/Pix2Pix-VC/demo/A_test.pkl')
+        
 
         return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
 
