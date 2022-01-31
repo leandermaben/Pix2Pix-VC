@@ -57,8 +57,6 @@ class AlignedDataset(BaseDataset):
 
         # A = A_transform(A)
         # B = B_transform(B)
-
-        save_pickle(A.numpy(),'/content/Pix2Pix-VC/demo/A_test.pkl')
         
 
         return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
