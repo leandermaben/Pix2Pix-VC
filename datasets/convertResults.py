@@ -26,10 +26,10 @@ def save_results_as_audio_and_spec(real_a,real_b,fake_b,image_path,save_dir):
     for img,suff in zip(imgs,suffs):
         img=img.squeeze()
         img=img.cpu().numpy()
-        save_pickle(img,os.path.join(save_dir,'images',image_path[:-4]+suff+'.pkl'))
         key = image_path[:33]+'.jpg'
         top_pad,right_pad = padding[key]
         spec = img[top_pad:,0:img.shape[1]-right_pad]
+        save_pickle(spec,os.path.join(save_dir,'images',image_path[:-4]+suff+'.pkl'))
         spec =torch.tensor(spec,dtype=torch.float32)
         rev = vocoder.inverse(spec.unsqueeze(0)).cpu().detach()
         torchaudio.save(os.path.join(save_dir,'audio',image_path[:-4]+suff+'.wav'), rev, sample_rate=SAMPLING_RATE, bits_per_sample=32)
