@@ -2,6 +2,7 @@ import os
 from data.base_dataset import BaseDataset, get_params, get_transform
 from data.image_folder import make_dataset
 from PIL import Image
+from util.util import load_pickle_file
 
 
 class AlignedDataset(BaseDataset):
@@ -38,7 +39,7 @@ class AlignedDataset(BaseDataset):
         """
         # read a image given a random integer index
         AB_path = self.AB_paths[index]
-        AB = Image.open(AB_path).convert('RGB')
+        AB = load_pickle_file(AB_path)
         # split AB image into A and B
         w, h = AB.size
         w2 = int(w / 2)

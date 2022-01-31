@@ -9,6 +9,7 @@ import cv2
 import librosa
 import pickle
 import matplotlib.pyplot as plt
+from util.util import save_pickle
 
 AUDIO_DATA_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/Parallel_speech_data'
 SUBDIRECTORIES_DEFAULT = ['clean','noisy']
@@ -46,9 +47,7 @@ def mel(wavspath):
     return mel_list, filenames, info
 
 
-def save_pickle(variable, fileName):
-    with open(fileName, 'wb') as f:
-        pickle.dump(variable, f)
+
 
 
 def preprocess_dataset(data_path, class_id, args):
@@ -98,7 +97,7 @@ def preprocess_dataset(data_path, class_id, args):
             padding[filename] = (top_pad,right_pad)
 
             ##Saving Image
-            cv2.imwrite(os.path.join(cache_folder,class_id,phase,filename),img_padded)
+            save_pickle(variable=img_padded,fileName=os.path.join(cache_folder,class_id,phase,filename))
     
     save_pickle(variable=padding,fileName=os.path.join(cache_folder, class_id, 'meta', f"{class_id}_padding.pickle"))
 

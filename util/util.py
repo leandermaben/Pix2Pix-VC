@@ -6,6 +6,14 @@ from PIL import Image
 import os
 
 
+def load_pickle_file(fileName):
+    with open(fileName, 'rb') as f:
+        return pickle.load(f)
+
+def save_pickle(variable, fileName):
+    with open(fileName, 'wb') as f:
+        pickle.dump(variable, f)
+
 def tensor2im(input_image, imtype=np.uint8):
     """"Converts a Tensor array into a numpy image array.
 
