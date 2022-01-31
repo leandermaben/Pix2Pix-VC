@@ -1,6 +1,5 @@
 .DS_Store
 debug*
-datasets/
 checkpoints/
 results/
 build/
@@ -41,3 +40,4 @@ test/.coverage
 test/data/legacy_serialized.pt
 *~
 .idea
+data_cache
