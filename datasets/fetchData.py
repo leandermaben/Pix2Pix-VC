@@ -83,7 +83,7 @@ def preprocess_dataset(data_path, class_id, args):
             mel_concatenated = np.concatenate(train_samples, axis=1)
             mel_mean = np.mean(mel_concatenated, axis=1, keepdims=True)
             mel_std = np.std(mel_concatenated, axis=1, keepdims=True) + 1e-9
-            np.savez(f'train_stats_{class_id}.npz',mean=mel_mean,std=mel_std)
+            np.savez(os.path.join(cache_folder, class_id, 'meta', f"{class_id}_stat.pickle"),mean=mel_mean,std=mel_std)
 
         for i in range(start,end):
             filename=filenames[indices[i]]
@@ -92,8 +92,8 @@ def preprocess_dataset(data_path, class_id, args):
             
             ##Padding the image
             freq_len,time_len = img.shape
-            top_pad = args.size_multiple - freq_len % args.size_multiple
-            right_pad = args.size_multiple - time_len % args.size_multiple 
+            top_pad = args.size_multiple - freq_len % args.size_multiple if freq_len % args.size_multiple!=0 else 0
+            right_pad = args.size_multiple - time_len % args.size_multiple if time_len % args.size_multiple!=0 else 0
             x_size = time_len+right_pad
             y_size = freq_len+top_pad
             img_padded = np.zeros((y_size,x_size))
@@ -124,8 +124,12 @@ if __name__ == '__main__':
     parser.add_argument('--data_cache', dest='data_cache', type=str, default=CACHE_DEFAULT, help="Directory to Store data and meta data.")
     parser.add_argument('--train_percent', dest='train_percent', type=int, default=70, help="Percentage for train split")
     parser.add_argument('--val_percent', dest='val_percent', type=int, default=15, help="Percentage for val split")
-    parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=256, help="Required Factor of Dimensions")
+    parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions")
     args = parser.parse_args()
+
+    for arg in vars(args):
+        print('[%s] = ' % arg, getattr(args, arg))
+
     for class_id in args.sub_directories:
         preprocess_dataset(os.path.join(args.audio_path,class_id),class_id,args)
 
