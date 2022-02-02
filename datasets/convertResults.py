@@ -36,10 +36,10 @@ def save_results_as_audio_and_spec(real_a,real_b,fake_b,image_path,save_dir):
             spec=spec*noisy_stats['std']+noisy_stats['mean']
         else:
             spec=spec*clean_stats['std']+clean_stats['mean']
-        save_pickle(spec,os.path.join(save_dir,'images',image_path[:-4]+suff+'.pkl'))
+        save_pickle(spec,os.path.join(save_dir,'images',image_path[:32]+suff+'.pickle'))
         spec =torch.tensor(spec,dtype=torch.float32)
         rev = vocoder.inverse(spec.unsqueeze(0)).cpu().detach()
-        torchaudio.save(os.path.join(save_dir,'audio',image_path[:-4]+suff+'.wav'), rev, sample_rate=SAMPLING_RATE, bits_per_sample=32)
+        torchaudio.save(os.path.join(save_dir,'audio',image_path[:32]+suff+'.wav'), rev, sample_rate=SAMPLING_RATE, bits_per_sample=32)
 
 
 
