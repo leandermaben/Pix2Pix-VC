@@ -83,7 +83,7 @@ def preprocess_dataset(data_path, class_id, args):
             mel_concatenated = np.concatenate(train_samples, axis=1)
             mel_mean = np.mean(mel_concatenated, axis=1, keepdims=True)
             mel_std = np.std(mel_concatenated, axis=1, keepdims=True) + 1e-9
-            np.savez(os.path.join(cache_folder, class_id, 'meta', f"{class_id}_stat.pickle"),mean=mel_mean,std=mel_std)
+            np.savez(os.path.join(cache_folder, class_id, 'meta', f"{class_id}_stat"),mean=mel_mean,std=mel_std)
 
         for i in range(start,end):
             filename=filenames[indices[i]]
