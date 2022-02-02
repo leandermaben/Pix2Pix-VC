@@ -68,6 +68,7 @@ def preprocess_dataset(data_path, class_id, args):
         os.makedirs(os.path.join(cache_folder, class_id, 'test'))
     
     indices = np.arange(0,len(mel_list))
+    np.random.seed(0)
     np.random.shuffle(indices)
 
     train_split = math.floor(args.train_percent/100*len(mel_list))
@@ -76,10 +77,18 @@ def preprocess_dataset(data_path, class_id, args):
     padding ={}
 
     for phase,(start, end) in zip(['train','val','test'],[(0,train_split),(train_split,train_split+val_split),(train_split+val_split,len(mel_list))]):
+        if phase=='train':
+            ## Get mean and norm
+            train_samples=mel_list[start:end]
+            mel_concatenated = np.concatenate(train_samples, axis=1)
+            mel_mean = np.mean(mel_concatenated, axis=1, keepdims=True)
+            mel_std = np.std(mel_concatenated, axis=1, keepdims=True) + 1e-9
+            np.savez(f'train_stats_{class_id}.npz',mean=mel_mean,std=mel_std)
+
         for i in range(start,end):
             filename=filenames[indices[i]]
-            img = mel_list[indices[i]]
-            filename=filename[:33]+'.jpg' ## THIS STEP IS SPECIFIC TO THE CURRENT DATASET TO ENSURE A AND B HAVE SAME FILENAMES
+            img = (mel_list[indices[i]]-mel_mean)/mel_std
+            filename=filename[:32]+'.pickle' ## THIS STEP IS SPECIFIC TO THE CURRENT DATASET TO ENSURE A AND B HAVE SAME FILENAMES
             
             ##Padding the image
             freq_len,time_len = img.shape
@@ -91,10 +100,12 @@ def preprocess_dataset(data_path, class_id, args):
             img_padded[-freq_len:,0:time_len] = img
 
             ## Saving Padding info
-            padding[filename] = (top_pad,right_pad)
+            padding[filename[:-7]] = (top_pad,right_pad)
 
             ##Saving Image
             save_pickle(variable=img_padded,fileName=os.path.join(cache_folder,class_id,phase,filename))
+        
+
     
     save_pickle(variable=padding,fileName=os.path.join(cache_folder, class_id, 'meta', f"{class_id}_padding.pickle"))
 
