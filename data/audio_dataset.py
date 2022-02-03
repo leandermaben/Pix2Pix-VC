@@ -1,9 +1,15 @@
 import torch
+import os
 from data.base_dataset import BaseDataset, get_params, get_transform
 from data.image_folder import make_dataset
 import multiprocessing
 import util.util as util
-import Image
+from PIL import Image
+import subprocess
+from itertools import chain
+from collections import OrderedDict
+import math
+from joblib import Parallel, delayed
 
 """
 Heavily borrows from https://github.com/shashankshirol/GeneratingNoisySpeechData
@@ -80,6 +86,7 @@ class AudioDataset(BaseDataset):
         """
         parser.add_argument('--class_ids', dest='class_ids', type=str, default=['clean','noisy'], help='class IDS of the two domains.')
         parser.add_argument('--spec_power', dest='spec_power', type=float, default=1.0, help='Number to raise spectrogram by.')
+        parser.add_argument('--energy', dest='energy', type=float, default=1.0, help='to modify the energy/amplitude of the audio-signals')
         
         return parser
 
