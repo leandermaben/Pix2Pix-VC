@@ -115,6 +115,22 @@ def preprocess_dataset(data_path, class_id, args):
     print(f"Total clips in dataset for {class_id} is {info['records_count']}")
     print('#'*25)
 
+def transfer_audio_raw(root_dir,class_id,data_cache,name_substr=32):
+    """
+    Tranfer audio files to a convinient location for processing
+    Arguments:
+    root_dir(str) - Directory where files are present
+    class_id(str) - Current class ID of data objects
+    data_cache(str) - Root directory to store data
+    name_substr(str,optinal) - Number of initial letters of filename to be included in filename of copied object.
+    """
+
+    os.makedirs(os.path.join(data_cache,class_id))
+
+    for file in os.listdir(root_dir):
+        if file[-4:]!-'.wav': #Skip file if not an audio file
+            continue
+        shutil.copyfile(os.path.join(root_dir,file),os.path.join(data_cache,class_id,file[:32]+'.wav'))
 
 
 if __name__ == '__main__':
@@ -125,13 +141,17 @@ if __name__ == '__main__':
     parser.add_argument('--train_percent', dest='train_percent', type=int, default=70, help="Percentage for train split")
     parser.add_argument('--val_percent', dest='val_percent', type=int, default=15, help="Percentage for val split")
     parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions")
+    parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram'], default='audio', help='Transfer files as raw audio or converted spectrogram.')
     args = parser.parse_args()
 
     for arg in vars(args):
         print('[%s] = ' % arg, getattr(args, arg))
 
     for class_id in args.sub_directories:
-        preprocess_dataset(os.path.join(args.audio_path,class_id),class_id,args)
+        if args.transfer_mode == 'spectrogram':
+            preprocess_dataset(os.path.join(args.audio_path,class_id),class_id,args)
+        else:
+            transfer_audio_raw(os.path.join(args.audio_path,class_id),class_id,args.data_cache)
 
 
 
