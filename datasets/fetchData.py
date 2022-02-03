@@ -115,22 +115,54 @@ def preprocess_dataset(data_path, class_id, args):
     print(f"Total clips in dataset for {class_id} is {info['records_count']}")
     print('#'*25)
 
-def transfer_audio_raw(root_dir,class_id,data_cache,name_substr=32):
+def get_filenames(fileNameA):
     """
-    Tranfer audio files to a convinient location for processing
+    Custom function for this specific dataset.
+    It returns the names of corresponding files in the 2 classes along with the common name by which it should be saved.
+
+    Args:
+    fileNameA(str) : Filename in the first class
+    """
+
+    return fileNameA, fileNameA[:32]+'-A.wav', fileNameA[:32]+'.wav'
+
+
+
+def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,val_percent,name_substr=32):
+    """
+    Tranfer audio files to a convinient location for processing with train,test,validation split.
     Arguments:
-    root_dir(str) - Directory where files are present
+    root_dir(str) - Root directory where files of specified classes are present in subdirectories.
     class_id(str) - Current class ID of data objects
     data_cache(str) - Root directory to store data
     name_substr(str,optinal) - Number of initial letters of filename to be included in filename of copied object.
     """
 
-    os.makedirs(os.path.join(data_cache,class_id))
+    for class_id in class_ids:
+        os.makedirs(os.path.join(data_cache,class_id,'train'))
+        os.makedirs(os.path.join(data_cache,class_id,'val'))
+        os.makedirs(os.path.join(data_cache,class_id,'test'))
 
-    for file in os.listdir(root_dir):
-        if file[-4:]!-'.wav': #Skip file if not an audio file
-            continue
-        shutil.copyfile(os.path.join(root_dir,file),os.path.join(data_cache,class_id,file[:32]+'.wav'))
+    files_list = [x for x in os.listdir(os.path.join(root_dir,class_ids[0])) if x[-4:]=='.wav']
+    num_files = len(files_list)
+
+    indices = np.arange(0,num_files)
+    np.random.seed(7)
+    np.random.shuffle(indices)
+
+    train_split = math.floor(train_percent/100*num_files)
+    val_split = math.floor(val_percent/100*num_files)
+
+    for phase,(start, end) in zip(['train','val','test'],[(0,train_split),(train_split,train_split+val_split),(train_split+val_split,num_files)]):
+        duration = 0
+        clips = 0
+        for i in range(start,end):
+            fileA, fileB, file=get_filenames(files_list[indices[i]])
+            shutil.copyfile(os.path.join(root_dir,class_ids[0],fileA),os.path.join(data_cache,class_ids[0],file))
+            shutil.copyfile(os.path.join(root_dir,class_ids[1],fileB),os.path.join(data_cache,class_ids[1],file))
+            duration+=librosa.get_duration(os.path.join(data_cache,class_ids[0],file))
+            clips+=1
+        print(f'{duration} seconds ({clips} clips) of Audio saved to {phase}.')
 
 
 if __name__ == '__main__':
@@ -146,12 +178,11 @@ if __name__ == '__main__':
 
     for arg in vars(args):
         print('[%s] = ' % arg, getattr(args, arg))
-
-    for class_id in args.sub_directories:
-        if args.transfer_mode == 'spectrogram':
+    if args.transfer_mode == 'spectrogram':
+        for class_id in args.sub_directories:        
             preprocess_dataset(os.path.join(args.audio_path,class_id),class_id,args)
-        else:
-            transfer_audio_raw(os.path.join(args.audio_path,class_id),class_id,args.data_cache)
+    else:
+        transfer_audio_raw(args.audio_path,args.sub_directories,args.data_cache)
 
 
 
