@@ -47,7 +47,7 @@ def mel(wavspath):
 
 
 
-def preprocess_dataset(data_path, class_id, args):
+def preprocess_dataset_spectrogram(data_path, class_id, args):
     """Preprocesses dataset of .wav files by converting to Mel-spectrograms.
     Args:
         data_path (str): Directory containing .wav files of the speaker.
@@ -128,14 +128,15 @@ def get_filenames(fileNameA):
 
 
 
-def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,val_percent,name_substr=32):
+def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,val_percent):
     """
-    Tranfer audio files to a convinient location for processing with train,test,validation split.
+    Transfer audio files to a convinient location for processing with train,test,validation split.
     Arguments:
     root_dir(str) - Root directory where files of specified classes are present in subdirectories.
     class_id(str) - Current class ID of data objects
     data_cache(str) - Root directory to store data
-    name_substr(str,optinal) - Number of initial letters of filename to be included in filename of copied object.
+    train_percent(int) - Percent of data clips in train split
+    val_percent(int) - Percent of data clips in validation split 
     """
 
     for class_id in class_ids:
@@ -160,7 +161,7 @@ def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,val_p
             fileA, fileB, file=get_filenames(files_list[indices[i]])
             shutil.copyfile(os.path.join(root_dir,class_ids[0],fileA),os.path.join(data_cache,class_ids[0],file))
             shutil.copyfile(os.path.join(root_dir,class_ids[1],fileB),os.path.join(data_cache,class_ids[1],file))
-            duration+=librosa.get_duration(os.path.join(data_cache,class_ids[0],file))
+            duration+=librosa.get_duration(filename=os.path.join(data_cache,class_ids[0],file))
             clips+=1
         print(f'{duration} seconds ({clips} clips) of Audio saved to {phase}.')
 
@@ -180,9 +181,9 @@ if __name__ == '__main__':
         print('[%s] = ' % arg, getattr(args, arg))
     if args.transfer_mode == 'spectrogram':
         for class_id in args.sub_directories:        
-            preprocess_dataset(os.path.join(args.audio_path,class_id),class_id,args)
+            preprocess_dataset_spectrogram(os.path.join(args.audio_path,class_id),class_id,args)
     else:
-        transfer_audio_raw(args.audio_path,args.sub_directories,args.data_cache)
+        transfer_aligned_audio_raw(args.audio_path,args.sub_directories,args.data_cache,args.train_percent,args.val_percent)
 
 
 
