@@ -159,6 +159,8 @@ def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,val_p
         clips = 0
         for i in range(start,end):
             fileA, fileB, file=get_filenames(files_list[indices[i]])
+            if librosa.get_duration(filename=os.path.join(root_dir,class_ids[0],fileA)) < 1: #Skipping very short files
+                continue
             shutil.copyfile(os.path.join(root_dir,class_ids[0],fileA),os.path.join(data_cache,class_ids[0],phase,file))
             shutil.copyfile(os.path.join(root_dir,class_ids[1],fileB),os.path.join(data_cache,class_ids[1],phase,file))
             duration+=librosa.get_duration(filename=os.path.join(data_cache,class_ids[0],phase,file))

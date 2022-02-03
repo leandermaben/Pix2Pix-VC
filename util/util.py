@@ -5,7 +5,7 @@ import numpy as np
 from PIL import Image
 import os
 import pickle
-import pyloudnorm
+import pyloudnorm as pyln
 import librosa
 import soundfile as sf
 

@@ -10,6 +10,7 @@ from itertools import chain
 from collections import OrderedDict
 import math
 from joblib import Parallel, delayed
+import numpy as np
 
 """
 Heavily borrows from https://github.com/shashankshirol/GeneratingNoisySpeechData
@@ -120,9 +121,11 @@ class AudioDataset(BaseDataset):
 
         #Compute the spectrogram components parallelly to make it more efficient; uses Joblib, maintains order of input data passed.
         self.clean_specs = Parallel(n_jobs=self.num_cores, prefer="threads")(delayed(processInput)(i, self.spec_power, self.phase, self.channels) for i in self.A_paths)
+        #self.clean_specs = [processInput(i, self.spec_power, self.phase, self.channels) for i in self.A_paths]
 
         #calculate no. of components in each sample
         self.no_comps_clean = Parallel(n_jobs=self.num_cores, prefer="threads")(delayed(countComps)(i) for i in self.clean_specs)
+        #self.no_comps_clean = [countComps(i) for i in self.clean_specs]
         self.clean_spec_paths = []
         self.clean_comp_dict = OrderedDict()
 
@@ -137,8 +140,10 @@ class AudioDataset(BaseDataset):
 
         del self.no_comps_clean
 
-        self.noisy_specs = Parallel(n_jobs=self.num_cores, prefer="threads")(delayed(processInput)(i, self.spec_power, self.state, self.channels) for i in self.B_paths)
+        self.noisy_specs = Parallel(n_jobs=self.num_cores, prefer="threads")(delayed(processInput)(i, self.spec_power, self.phase, self.channels) for i in self.B_paths)
         self.no_comps_noisy = Parallel(n_jobs=self.num_cores, prefer="threads")(delayed(countComps)(i) for i in self.noisy_specs)
+        #self.noisy_specs = [processInput(i, self.spec_power, self.state, self.channels) for i in self.B_paths]
+        #self.no_comps_noisy = [countComps(i) for i in self.noisy_specs]
         self.noisy_spec_paths = []
         self.noisy_comp_dict = OrderedDict()
         for nameB, countB in zip(self.B_paths, self.no_comps_noisy):
@@ -157,7 +162,7 @@ class AudioDataset(BaseDataset):
         B_path = self.noisy_spec_paths[index]
         B_img = self.noisy_specs[index]
 
-        transform_params = get_params(self.opt, A.size)
+        transform_params = get_params(self.opt, A_img.size)
         A_transform = get_transform(self.opt, transform_params, grayscale= True)
         B_transform = get_transform(self.opt, transform_params, grayscale= True)
         A = A_transform(A_img)
