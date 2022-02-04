@@ -37,6 +37,7 @@ import ntpath
 from PIL import Image
 from util.util import denorm_and_numpy, getTimeSeries
 import soundfile as sf
+import numpy as np
 
 try:
     import wandb
@@ -80,7 +81,7 @@ def save_audio(opt, visuals_list, img_path):
         else:
             spec = np.concatenate((spec, im), axis=1) #concatenating specs to obtain original.
 
-    data, sr = getTimeSeries(spec, img_path, opt.spec_power, opt.energy, state = opt.state)
+    data, sr = getTimeSeries(spec, img_path, opt.spec_power, opt.energy, state = opt.phase)
     sf.write(save_path, data, sr)
 
     return
