@@ -168,8 +168,10 @@ class AudioDataset(BaseDataset):
         A = A_transform(A_img)
         B = B_transform(B_img)
 
-        
-        return {'A': A, 'B': B, 'A_paths': A_path, 'B_paths': B_path}
+        if (self.phase).lower() == 'train':
+            return {'A': A, 'B': B, 'A_paths': A_path, 'B_paths': B_path}
+        else:
+            return {'A': A, 'B': B, 'A_paths': A_path, 'B_paths': B_path, A_comps: self.clean_comp_dict[A_path]}
 
 
     def __len__(self):

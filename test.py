@@ -33,11 +33,57 @@ from models import create_model
 from util.visualizer import save_images
 from util import html
 from datasets.convertResults import save_results_as_audio_and_spec
+import ntpath
+from PIL import Image
+from util.util import denorm_and_numpy, getTimeSeries
+import soundfile as sf
 
 try:
     import wandb
 except ImportError:
     print('Warning: wandb package cannot be found. The option "--use_wandb" will result in error.')
+
+
+def save_audio(opt, visuals_list, img_path):
+
+    """
+    Borrowed from https://github.com/shashankshirol/GeneratingNoisySpeechData
+    """
+
+    results_dir = os.path.join(opt.results_dir, opt.name, '{}_{}'.format(opt.phase, opt.epoch))
+    img_dir = os.path.join(results_dir, 'audios')
+    short_path = ntpath.basename(img_path[0])
+    name = os.path.splitext(short_path)[0]
+
+    label = "fake_B"  # Concerned with only the fake generated; ignoring other labels
+
+    file_name = '%s/%s.wav' % (label, name)
+    os.makedirs(os.path.join(img_dir, label), exist_ok=True)
+    save_path = os.path.join(img_dir, file_name)
+
+    flag_first = True
+
+    for visual in visuals_list:
+        im_data = visual["fake_B"] #Obtaining the generated Output
+        im = denorm_and_numpy(im_data) #De-Normalizing the output tensor to reconstruct the spectrogram
+
+        #Resizing the output to 129x128 size (original splits)
+        if(im.shape[-1] == 1): #to drop last channel
+            im = im[:,:,0]
+        im = Image.fromarray(im)
+        im = im.resize((128, 129), Image.LANCZOS)
+        im = np.asarray(im).astype(np.float)
+
+        if(flag_first):
+            spec = im
+            flag_first = False
+        else:
+            spec = np.concatenate((spec, im), axis=1) #concatenating specs to obtain original.
+
+    data, sr = getTimeSeries(spec, img_path, opt.spec_power, opt.energy, state = opt.state)
+    sf.write(save_path, data, sr)
+
+    return
 
 
 if __name__ == '__main__':
@@ -68,15 +114,51 @@ if __name__ == '__main__':
     # For [CycleGAN]: It should not affect CycleGAN as CycleGAN uses instancenorm without dropout.
     if opt.eval:
         model.eval()
-    for i, data in enumerate(dataset):
-        if i >= opt.num_test:  # only apply our model to opt.num_test images.
-            break
-        model.set_input(data)  # unpack data from data loader
-        model.test()           # run inference
-        save_results_as_audio_and_spec(model.real_A,model.real_B,model.fake_B,model.image_paths[0],opt.save_dir)
-        visuals = model.get_current_visuals()  # get image results
-        img_path = model.get_image_paths()     # get image paths
-        if i % 5 == 0:  # save images to an HTML file
-            print('processing (%04d)-th image... %s' % (i, img_path))
-        save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, use_wandb=opt.use_wandb)
-    webpage.save()  # save the HTML
+    if opt.convert_mode == 'melgan':
+        for i, data in enumerate(dataset):
+            if i >= opt.num_test:  # only apply our model to opt.num_test images.
+                break
+            model.set_input(data)  # unpack data from data loader
+            model.test()           # run inference
+            save_results_as_audio_and_spec(model.real_A,model.real_B,model.fake_B,model.image_paths[0],opt.save_dir)
+            visuals = model.get_current_visuals()  # get image results
+            img_path = model.get_image_paths()     # get image paths
+            if i % 5 == 0:  # save images to an HTML file
+                print('processing (%04d)-th image... %s' % (i, img_path))
+            save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, use_wandb=opt.use_wandb)
+        webpage.save()  # save the HTML
+    else:
+        """
+        Borrowed from https://github.com/shashankshirol/GeneratingNoisySpeechData
+        """
+        ds_len = len(dataset)
+        idx = 0
+        datas = []
+        for i, data in enumerate(dataset):
+            datas.append(data)
+        while idx < ds_len:
+
+            if(idx >= opt.num_test):
+                break
+
+            model.set_input(datas[idx])
+            model.test()
+            visuals = model.get_current_visuals()
+            img_path = model.get_image_paths()
+            visuals_list = [visuals]
+            num_comps = datas[idx]["A_comps"]
+            comps_processed = 1
+
+            while(comps_processed < num_comps):
+                idx += 1
+                model.set_input(datas[idx])
+                model.test()
+                visuals = model.get_current_visuals()
+                img_path = model.get_image_paths()
+                visuals_list.append(visuals)
+                comps_processed += 1
+
+            print("saving: ", img_path[0])
+            save_audio(opt, visuals_list, img_path)
+            idx += 1
+            
