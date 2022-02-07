@@ -1,6 +1,7 @@
 import os
 from evaluate_lsd import main as lsd
 import pandas as pd
+import shutil
 
 def run(command):
     print(command)
@@ -12,7 +13,7 @@ def log(path,name,comment,avg_lsd,min_lsd):
     """
     Created by Leander Maben.
     """
-    df=pd.load_csv(path)
+    df=pd.read_csv(path)
     df.loc[len(df.index)] = [name,comment,avg_lsd,min_lsd]
     df.to_csv(path,index=False)
 
@@ -44,6 +45,6 @@ if __name__ == '__main__':
         df=pd.DataFrame(columns=cols)
         df.to_csv(csv_path,index=False)
 
-    train_percents =[10,25,50,75]
+    train_percents =[25,50,75]
     vary_data(train_percents,15,[f'pix_noisy_{i}' for i in train_percents], csv_path)
     
