@@ -107,6 +107,7 @@ class AudioDataset(BaseDataset):
         self.num_cores = multiprocessing.cpu_count()
 
         if("passcodec" in opt.preprocess):
+            print("#"*25)
             print("------Passing samples through g726 Codec using FFmpeg------")
             for path in self.A_paths:
                 subprocess.call(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-i', path, '-ar', '8k', '-y', path[:-4] + '_8k.wav'])

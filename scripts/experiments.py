@@ -1,5 +1,5 @@
 import os
-import evaluate_lsd.main as lsd
+from evaluate_lsd import main as lsd
 import pandas as pd
 
 def run(command):
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     if not os.path.exists(csv_path):
         cols=['name','comment','avg_lsd','min_lsd']
         df=pd.DataFrame(columns=cols)
-        pd.to_csv(df,index=False)
+        df.to_csv(csv_path,index=False)
 
     train_percents =[10,25,50,75]
     vary_data(train_percents,15,[f'pix_noisy_{i}' for i in train_percents], csv_path)
