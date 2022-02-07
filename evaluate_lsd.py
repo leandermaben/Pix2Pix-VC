@@ -10,6 +10,7 @@ import math
 import random
 import os
 import soundfile as sf
+import shutil
 #from timeit import default_timer as timer
 
 RESULTS_DEFAULT = '/content/Pix2Pix-VC/results/noise_pix2pix/test_latest/audios/fake_B'
@@ -211,16 +212,22 @@ def norm_and_LSD(file1, file2):
     print("LSD (Spectrogram) between %s, %s = %f" % (file1, file2, calc_LSD_spectrogram(a, b)))
     return calc_LSD_spectrogram(a, b)
 
-def main():
+def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
+
+    """
+    Modified by Leander Maben.
+    """
+
+
     #add your files
     total=0
     count=0
     min_lsd = 10000
 
     #Checking for sample rates
-    file_0 = os.listdir(SOURCE_DEFAULT)[0]
-    file1 = os.path.join(SOURCE_DEFAULT,file_0)
-    file2 = os.path.join(RESULTS_DEFAULT,file_0)
+    file_0 = os.listdir(source_dir)[0]
+    file1 = os.path.join(source_dir,file_0)
+    file2 = os.path.join(results_dir,file_0)
     _,file1_rate = librosa.load(file1, sr=None)
     _,file2_rate = librosa.load(file2, sr=None)
 
@@ -228,29 +235,28 @@ def main():
         ## Storing original audios in a new temp cache with desired sample_rate
         TEMP_CACHE = '/content/temp'
         os.makedirs(TEMP_CACHE)
-        for file in os.listdir(SOURCE_DEFAULT):
-            file1 = os.path.join(SOURCE_DEFAULT,file)
+        for file in os.listdir(source_dir):
+            file1 = os.path.join(source_dir,file)
             loaded_file,_ = librosa.load(file1, sr=file2_rate)
             sf.write(os.path.join(TEMP_CACHE,file), loaded_file, file2_rate, 'PCM_16')
     else:
-        TEMP_CACHE = SOURCE_DEFAULT
+        TEMP_CACHE = source_dir
 
-    for file in os.listdir(SOURCE_DEFAULT):
+    for file in os.listdir(source_dir):
         file1 = os.path.join(TEMP_CACHE,file)
-        file2 = os.path.join(RESULTS_DEFAULT,file)
+        file2 = os.path.join(results_dir,file)
         lsd=norm_and_LSD(file1, file2)
         total+=lsd
         min_lsd=min(min_lsd,lsd)
         count+=1
     print(f'Average LSD is {total/count}')
     print(f'Min LSD is {min_lsd}')
-
     
+    if TEMP_CACHE!=source_dir:
+        shutil.rmtree(TEMP_CACHE)
 
-    #normalize and calculate LSD
-    # File2 always the one to be normalized to match File1
-    
-    return
+    return total/count, min_lsd
+
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,5 @@
 from .base_options import BaseOptions
 
-
 class TestOptions(BaseOptions):
     """This class includes test options.
 

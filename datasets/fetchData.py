@@ -53,6 +53,8 @@ def preprocess_dataset_spectrogram(data_path, class_id, args):
         data_path (str): Directory containing .wav files of the speaker.
         speaker_id (str): ID of the speaker.
         cache_folder (str, optional): Directory to hold preprocessed data. Defaults to './cache/'.
+
+        Modified By Leander Maben.
     """
 
     print(f"Preprocessing data for class: {class_id}.")
@@ -122,13 +124,15 @@ def get_filenames(fileNameA):
 
     Args:
     fileNameA(str) : Filename in the first class
+
+    Created By Leander Maben
     """
 
     return fileNameA, fileNameA[:32]+'-A.wav', fileNameA[:32]+'.wav'
 
 
 
-def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,val_percent):
+def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,test_percent):
     """
     Transfer audio files to a convinient location for processing with train,test,validation split.
     Arguments:
@@ -136,12 +140,13 @@ def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,val_p
     class_id(str) - Current class ID of data objects
     data_cache(str) - Root directory to store data
     train_percent(int) - Percent of data clips in train split
-    val_percent(int) - Percent of data clips in validation split 
+    test_percent(int) - Percent of data clips in test split
+
+    Created By Leander Maben. 
     """
 
     for class_id in class_ids:
         os.makedirs(os.path.join(data_cache,class_id,'train'))
-        os.makedirs(os.path.join(data_cache,class_id,'val'))
         os.makedirs(os.path.join(data_cache,class_id,'test'))
 
     files_list = [x for x in os.listdir(os.path.join(root_dir,class_ids[0])) if x[-4:]=='.wav']
@@ -152,9 +157,9 @@ def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,val_p
     np.random.shuffle(indices)
 
     train_split = math.floor(train_percent/100*num_files)
-    val_split = math.floor(val_percent/100*num_files)
+    test_split = math.floor(test_percent/100*num_files)
 
-    for phase,(start, end) in zip(['train','val','test'],[(0,train_split),(train_split,train_split+val_split),(train_split+val_split,num_files)]):
+    for phase,(start, end) in zip(['train','test'],[(0,train_split),(num_files-test_split,num_files)]):
         duration = 0
         clips = 0
         for i in range(start,end):
@@ -174,7 +179,7 @@ if __name__ == '__main__':
     parser.add_argument('--source_sub_directories', dest = 'sub_directories',type=str, default=SUBDIRECTORIES_DEFAULT, help="Sub directories for data")
     parser.add_argument('--data_cache', dest='data_cache', type=str, default=CACHE_DEFAULT, help="Directory to Store data and meta data.")
     parser.add_argument('--train_percent', dest='train_percent', type=int, default=70, help="Percentage for train split")
-    parser.add_argument('--val_percent', dest='val_percent', type=int, default=15, help="Percentage for val split")
+    parser.add_argument('--test_percent', dest='test_percent', type=int, default=15, help="Percentage for test split")
     parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions")
     parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram'], default='audio', help='Transfer files as raw audio or converted spectrogram.')
     args = parser.parse_args()
@@ -185,7 +190,7 @@ if __name__ == '__main__':
         for class_id in args.sub_directories:        
             preprocess_dataset_spectrogram(os.path.join(args.audio_path,class_id),class_id,args)
     else:
-        transfer_aligned_audio_raw(args.audio_path,args.sub_directories,args.data_cache,args.train_percent,args.val_percent)
+        transfer_aligned_audio_raw(args.audio_path,args.sub_directories,args.data_cache,args.train_percent,args.test_percent)
 
 
 
