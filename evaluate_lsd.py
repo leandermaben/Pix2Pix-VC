@@ -13,7 +13,7 @@ import soundfile as sf
 import shutil
 #from timeit import default_timer as timer
 
-RESULTS_DEFAULT = '/content/Pix2Pix-VC/results/noise_pix2pix/test_latest/audios/fake_B'
+RESULTS_DEFAULT = '/content/Pix2Pix-VC/results/noisy_pix2pix/test_latest/audios/fake_B'
 SOURCE_DEFAULT = '/content/Pix2Pix-VC/data_cache/noisy/test' 
 
 
@@ -223,6 +223,7 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
     total=0
     count=0
     min_lsd = 10000
+    min_file = None
 
     #Checking for sample rates
     file_0 = os.listdir(source_dir)[0]
@@ -248,9 +249,13 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
         lsd=norm_and_LSD(file1, file2)
         total+=lsd
         min_lsd=min(min_lsd,lsd)
+        if min_lsd==lsd:
+            min_file=file
+
         count+=1
     print(f'Average LSD is {total/count}')
     print(f'Min LSD is {min_lsd}')
+    print(f'{min_file} has min LSD')
     
     if TEMP_CACHE!=source_dir:
         shutil.rmtree(TEMP_CACHE)
