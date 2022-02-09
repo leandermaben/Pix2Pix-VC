@@ -153,6 +153,10 @@ def get_filenames(fileNameA):
 def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,test_percent):
     """
     Transfer audio files to a convinient location for processing with train,test,validation split.
+
+    Important Note: The splitting of data by percent is based on file numbers and not on cummulative duration
+    of clips. Moreover, it does not take into the account the number of clips that are discarded for being less than 1 second long.
+
     Arguments:
     root_dir(str) - Root directory where files of specified classes are present in subdirectories.
     class_id(str) - Current class ID of data objects
