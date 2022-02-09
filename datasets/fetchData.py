@@ -11,6 +11,11 @@ import pickle
 import matplotlib.pyplot as plt
 from util.util import save_pickle
 
+"""
+Code to transfer audio data from a source folder to a target folder with train and test splits.
+
+"""
+
 AUDIO_DATA_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/Parallel_speech_data'
 SUBDIRECTORIES_DEFAULT = ['clean','noisy']
 CACHE_DEFAULT = '/content/Pix2Pix-VC/data_cache'

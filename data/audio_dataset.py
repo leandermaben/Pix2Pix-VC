@@ -88,6 +88,7 @@ class AudioDataset(BaseDataset):
         parser.add_argument('--class_ids', dest='class_ids', type=str, default=['clean','noisy'], help='class IDS of the two domains.')
         parser.add_argument('--spec_power', dest='spec_power', type=float, default=1.0, help='Number to raise spectrogram by.')
         parser.add_argument('--energy', dest='energy', type=float, default=1.0, help='to modify the energy/amplitude of the audio-signals')
+        parser.set_defaults(preprocess='resize',load_size=128)
         
         return parser
 
