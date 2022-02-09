@@ -13,7 +13,7 @@ import soundfile as sf
 import shutil
 #from timeit import default_timer as timer
 
-RESULTS_DEFAULT = '/content/Pix2Pix-VC/results/noisy_pix2pix/test_latest/audios/fake_B'
+RESULTS_DEFAULT = '/content/Pix2Pix-VC/results/noise_pix2pix/test_latest/audios/fake_B'
 SOURCE_DEFAULT = '/content/Pix2Pix-VC/data_cache/noisy/test' 
 
 

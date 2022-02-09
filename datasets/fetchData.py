@@ -13,6 +13,19 @@ from util.util import save_pickle
 
 """
 Code to transfer audio data from a source folder to a target folder with train and test splits.
+Change AUDIO_DATA_PATH_DEFAULT to point to root dir such that (or use command line argument)
+-root
+    -subdirectory[0]
+        -sample_0
+        -....
+    -subdirectory[1]
+        -sample_0
+        -sample_1
+Change CACHE_DEFAULT to the directory where you want data to be stored.
+
+There are 2 options to transfer data -> It can be transferred as audio files or as spectrograms.
+Spectrograms are generated using MelGAN.However, MelGAN performs poorly when converting noisy spectrogram back to audio.
+Hence it is recommended to use the 'audio' option for the argument --transfer_mode (It is already set as default)
 
 """
 
@@ -185,7 +198,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_cache', dest='data_cache', type=str, default=CACHE_DEFAULT, help="Directory to Store data and meta data.")
     parser.add_argument('--train_percent', dest='train_percent', type=int, default=70, help="Percentage for train split")
     parser.add_argument('--test_percent', dest='test_percent', type=int, default=15, help="Percentage for test split")
-    parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions")
+    parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions if spectrogram mode of tranfer is used")
     parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram'], default='audio', help='Transfer files as raw audio or converted spectrogram.')
     args = parser.parse_args()
 
