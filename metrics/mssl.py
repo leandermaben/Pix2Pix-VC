@@ -1,42 +1,108 @@
 import librosa
+import os
 import numpy as np
-import soundfile as sf
-import torch
-import matplotlib.pyplot as plt
-import scipy.io.wavfile as wav
+import pyloudnorm as pyln
 from scipy import signal
 from pydub import AudioSegment
+import scipy.io.wavfile as wav
 import math
-import random
-import os
 import soundfile as sf
 import shutil
-#from timeit import default_timer as timer
+import pandas as pd
 
 RESULTS_DEFAULT = '/content/Pix2Pix-VC/results/noise_pix2pix/test_latest/audios/fake_B'
 SOURCE_DEFAULT = '/content/Pix2Pix-VC/data_cache/noisy/test' 
 CSV_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/annotations.csv'
 
+STANDARD_LUFS = -23.0
+OVERLAP_DEFAULT = 0.75 
 
-def calc_LSD_spectrogram(a, b):
+MAG_WEIGHT_DEFAULT = 1
+LOGMAG_WEIGHT_DEFAULT = 0
+
+
+def stft(audio,n_fft,overlap):
     """
-        Computes LSD (Log - spectral distance)
-        Arguments:
-            a: vector (torch.Tensor), modified signal
-            b: vector (torch.Tensor), reference signal (ground truth)
+    Perform stft on audio and return magnitude spectrogram.
+
+    Created by Leander Maben.
     """
-    if(len(a) == len(b)):
-        diff = torch.pow(a-b, 2)
-    else:
-        stop = min(len(a), len(b))
-        diff = torch.pow(a[:stop] - b[:stop], 2)
+    comp_spec = librosa.stft(audio,n_fft=n_fft,win_length=n_fft,center=False,hop_length=int(n_fft * (1.0 - overlap)))
+    mag_spec = np.abs(comp_spec)
+    return mag_spec
 
-    sum_freq = torch.sqrt(torch.sum(diff, dim=1)/diff.size(1))
+def safe_log(self,x, eps=1e-5):
+    safe_x = np.where(x <= eps, eps, x)
+    return np.log(safe_x)
 
-    value = torch.sum(sum_freq, dim=0) / sum_freq.size(0)
+# def normalize(audio, sr, target_loudness=STANDARD_LUFS):
+#     meter = pyln.Meter(sr)
+#     loudness = meter.integrated_loudness(audio)
+#     audio = pyln.normalize.loudness(audio, loudness, target_loudness = target_loudness)
+#     return audio
 
-    return value.numpy()
+def normalize(sig1, sig2):
+    """sig1 is the ground_truth file
+       sig2 is the file to be normalized"""
 
+    def get_mediainfo(sig):
+        rate, data = wav.read(sig)
+        bits_per_sample = np.NaN
+        if(data.dtype == 'int16'):
+            bits_per_sample = 16
+        elif(data.dtype == 'int32'):
+            bits_per_sample = 32
+
+        return rate, bits_per_sample
+
+    sample_rate1, bits_per_sample_sig1 = get_mediainfo(sig1)
+    sample_rate2, bits_per_sample_sig2 = get_mediainfo(sig2)
+
+    ## bps and sample rate must match
+    assert bits_per_sample_sig1 == bits_per_sample_sig2
+    assert sample_rate1 == sample_rate2
+
+    def match_target_amplitude(sound, target):
+        change = target - sound.dBFS
+        return sound.apply_gain(change)
+
+    sound1 = AudioSegment.from_wav(sig1)
+    sound2 = AudioSegment.from_wav(sig2)
+
+    ## Matching loudness
+    sound2 = match_target_amplitude(sound2, sound1.dBFS)
+
+    ## getting it back to librosa form
+    samples1 = sound1.get_array_of_samples()
+    data1 = np.array(samples1).astype(np.float32)/(2**(bits_per_sample_sig1 - 1))
+
+    samples2 = sound2.get_array_of_samples()
+    data2 = np.array(samples2).astype(np.float32)/(2**(bits_per_sample_sig2 - 1))
+
+    return data1, data2, sample_rate1
+
+
+
+def compute_mssl(file1,file2,n_ffts, mag_weight=MAG_WEIGHT_DEFAULT, logmag_weight=LOGMAG_WEIGHT_DEFAULT):
+    loss = 0
+
+    _, aud_1 = wav.read(file1)
+    _, aud_2 = wav.read(file2)
+    if(np.sum(aud_1.astype(float)**2) > np.sum(aud_2.astype(float)**2)):
+        file1, file2 = file2, file1
+        
+    data1, data2, sr = normalize(sig1=file1, sig2=file2)
+
+    data1, data2 = time_and_energy_align(data1,data2, sr)
+
+    for n_fft in n_ffts:
+        spec1 =stft(data1, n_fft, OVERLAP_DEFAULT)
+        spec2 =stft(data2, n_fft, OVERLAP_DEFAULT)
+        if mag_weight > 0:
+            loss += mag_weight * np.mean(np.abs(spec1-spec2))
+        if logmag_weight > 0:
+            loss+=logmag_weight * np.mean(np.abs(safe_log(spec1)-safe_log(spec2)))
+    return loss
 
 def AddNoiseFloor(data):
     frameSz = 128
@@ -131,106 +197,13 @@ def time_and_energy_align(data1, data2, sr):
 
     return data1, data2
 
+def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_genders=True):
 
-def normalize(sig1, sig2):
-    """sig1 is the ground_truth file
-       sig2 is the file to be normalized"""
-
-    def get_mediainfo(sig):
-        rate, data = wav.read(sig)
-        bits_per_sample = np.NaN
-        if(data.dtype == 'int16'):
-            bits_per_sample = 16
-        elif(data.dtype == 'int32'):
-            bits_per_sample = 32
-
-        return rate, bits_per_sample
-
-    sample_rate1, bits_per_sample_sig1 = get_mediainfo(sig1)
-    sample_rate2, bits_per_sample_sig2 = get_mediainfo(sig2)
-
-    ## bps and sample rate must match
-    assert bits_per_sample_sig1 == bits_per_sample_sig2
-    assert sample_rate1 == sample_rate2
-
-    def match_target_amplitude(sound, target):
-        change = target - sound.dBFS
-        return sound.apply_gain(change)
-
-    sound1 = AudioSegment.from_wav(sig1)
-    sound2 = AudioSegment.from_wav(sig2)
-
-    ## Matching loudness
-    sound2 = match_target_amplitude(sound2, sound1.dBFS)
-
-    ## getting it back to librosa form
-    samples1 = sound1.get_array_of_samples()
-    data1 = np.array(samples1).astype(np.float32)/(2**(bits_per_sample_sig1 - 1))
-
-    samples2 = sound2.get_array_of_samples()
-    data2 = np.array(samples2).astype(np.float32)/(2**(bits_per_sample_sig2 - 1))
-
-    return data1, data2, sample_rate1
-
-
-def norm_and_LSD(file1, file2):
-    nfft = 256
-    overlapSz = 128
-    frameSz = 256
-    eps = 1e-9
-
-    #normalizing
-    
-    # lower energy of the two is matched
-    _, aud_1 = wav.read(file1)
-    _, aud_2 = wav.read(file2)
-    if(np.sum(aud_1.astype(float)**2) > np.sum(aud_2.astype(float)**2)):
-        file1, file2 = file2, file1
-        
-    data1, data2, sr = normalize(sig1=file1, sig2=file2)
-
-    """ ###Testing cross-correlation###########
-    xcorr = np.correlate(data1, data2, "full")
-    print(np.argmax(xcorr), type(xcorr) , np.max(xcorr))
-    print("lag = ", np.argmax(xcorr) - xcorr.size//2) """
-
-    data1, data2 = time_and_energy_align(data1, data2, sr=sr)
-    assert len(data1) == len(data2)
-
-    n = len(data1)
-
-    s1 = (abs(librosa.stft(data1, n_fft=nfft, window='hamming'))**2)/n # Power Spectrogram
-    s2 = (abs(librosa.stft(data2, n_fft=nfft, window='hamming'))**2)/n # Power Spectrogram
-
-    # librosa.power_todb(S) basically returns 10*log10(S)
-    s1 = librosa.power_to_db(s1 + eps)
-    # librosa.power_todb(S) basically returns 10*log10(S)
-    s2 = librosa.power_to_db(s2 + eps)
-
-    a = torch.from_numpy(s1)
-    b = torch.from_numpy(s2)
-
-    print("LSD (Spectrogram) between %s, %s = %f" % (file1, file2, calc_LSD_spectrogram(a, b)))
-    return calc_LSD_spectrogram(a, b)
-
-def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
-
-    """
-    Modified by Leander Maben.
-    
-    """
     annotations = {}
     anno_csv = pd.read_csv(CSV_PATH_DEFAULT)
     for i in range(len(anno_csv)):
         row=anno_csv.iloc[i]
         annotations[row['file']]=row['gender']
-
-
-    #add your files
-    total=0
-    count=0
-    min_lsd = 10000
-    min_file = None
 
     #Checking for sample rates
     file_0 = os.listdir(source_dir)[0]
@@ -249,27 +222,24 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
             sf.write(os.path.join(TEMP_CACHE,file), loaded_file, file2_rate, 'PCM_16')
     else:
         TEMP_CACHE = source_dir
-
+    
     male_loss = []
     female_loss = []
+
 
     for file in os.listdir(source_dir):
         file1 = os.path.join(TEMP_CACHE,file)
         file2 = os.path.join(results_dir,file)
-        lsd=norm_and_LSD(file1, file2)
-        total+=lsd
-        min_lsd=min(min_lsd,lsd)
-        if min_lsd==lsd:
-            min_file=file
+
+        loss = compute_mssl(file1,file2,[2048, 1024, 512, 256, 128, 64])
 
         if annotations[file] == 'M':
-            male_loss.append(lsd)
+            male_loss.append(loss)
 
         else:
-            female_loss.append(lsd)
+            female_loss.append(loss)
 
-        count+=1
-    
+        
     total_loss = np.concatenate((male_loss,female_loss))
 
     total_mean = total_loss.mean()
@@ -279,15 +249,10 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
     female_mean = np.mean(female_loss)
     female_std = np.std(female_loss)
 
-    print(f'Average LSD is {total/count}')
-    print(f'Min LSD is {min_lsd}')
-    print(f'{min_file} has min LSD')
-    
     if TEMP_CACHE!=source_dir:
         shutil.rmtree(TEMP_CACHE)
 
     return total_mean, total_std, male_mean, male_std, female_mean, female_std
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    print(main())

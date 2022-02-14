@@ -1,7 +1,11 @@
 import os
-from evaluate_lsd import main as lsd
 import pandas as pd
 import shutil
+import sys
+
+sys.path.append('/content/Pix2Pix-VC')
+
+from evaluate_lsd import main as lsd
 
 def run(command):
     print(command)
@@ -71,7 +75,7 @@ def run_eval(checkpoints_dir='/content/Pix2Pix-VC/checkpoints', data_cache='/con
 
 
 if __name__ == '__main__':
-    csv_path = '/content/drive/MyDrive/NTU - Speech Augmentation/pix2pix.csv'
+    csv_path = '/content/drive/MyDrive/NTU - Speech Augmentation/pix2pix_15Feb.csv'
     if not os.path.exists(csv_path):
         cols=['name','comment','avg_lsd','min_lsd']
         df=pd.DataFrame(columns=cols)
