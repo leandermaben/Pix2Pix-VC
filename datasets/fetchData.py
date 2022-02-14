@@ -4,6 +4,7 @@ import torch
 import tqdm
 import os
 import numpy as np
+import pandas as pd
 import math
 import cv2
 import librosa
@@ -33,6 +34,7 @@ AUDIO_DATA_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/Para
 SUBDIRECTORIES_DEFAULT = ['clean','noisy']
 CACHE_DEFAULT = '/content/Pix2Pix-VC/data_cache'
 SAMPLING_RATE = 22050
+CSV_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/annotations.csv'
 
 ## mel function inspired from https://github.com/GANtastic3/MaskCycleGAN-VC
 
@@ -150,7 +152,7 @@ def get_filenames(fileNameA):
 
 
 
-def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,test_percent):
+def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,test_percent, use_genders, annotations_path):
     """
     Transfer audio files to a convinient location for processing with train,test,validation split.
 
@@ -167,6 +169,14 @@ def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,test_
     Created By Leander Maben. 
     """
 
+    if use_genders != 'None':
+        annotations = {}
+        anno_csv = pd.read_csv(annotations_path)
+        for i in range(len(anno_csv)):
+            row=anno_csv.iloc[i]
+            annotations[row['file']]=row['gender']
+
+
     for class_id in class_ids:
         os.makedirs(os.path.join(data_cache,class_id,'train'))
         os.makedirs(os.path.join(data_cache,class_id,'test'))
@@ -182,28 +192,55 @@ def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,test_
     test_split = math.floor(test_percent/100*num_files)
 
     for phase,(start, end) in zip(['train','test'],[(0,train_split),(num_files-test_split,num_files)]):
-        duration = 0
-        clips = 0
+        
+        total_duration=0
+        total_clips=0
+        
+        if use_genders!='None':
+            male_duration = 0
+            female_duration = 0
+            male_clips = 0
+            female_clips = 0
+
+
         for i in range(start,end):
             fileA, fileB, file=get_filenames(files_list[indices[i]])
             if librosa.get_duration(filename=os.path.join(root_dir,class_ids[0],fileA)) < 1: #Skipping very short files
                 continue
+            if use_genders!='None':
+                if annotations[file] not in use_genders:
+                    continue
             shutil.copyfile(os.path.join(root_dir,class_ids[0],fileA),os.path.join(data_cache,class_ids[0],phase,file))
             shutil.copyfile(os.path.join(root_dir,class_ids[1],fileB),os.path.join(data_cache,class_ids[1],phase,file))
-            duration+=librosa.get_duration(filename=os.path.join(data_cache,class_ids[0],phase,file))
-            clips+=1
-        print(f'{duration} seconds ({clips} clips) of Audio saved to {phase}.')
+            duration=librosa.get_duration(filename=os.path.join(data_cache,class_ids[0],phase,file))
+            
+            total_duration+=duration
+            total_clips+=1
+
+            if use_genders!='None':
+                if annotations[file] == 'M':
+                    male_clips+=1
+                    male_duration+=duration
+                else:
+                    female_clips+=1
+                    female_duration+=duration
+
+        print(f'{total_duration} seconds ({total_clips} clips) of Audio saved to {phase}.')
+        print(f'{male_duration} seconds ({male_clips} clips) of male Audio in {phase}.')
+        print(f'{female_duration} seconds ({female_clips} clips) of female Audio in {phase}.')
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser('Generate Spectrograms')
+    parser = argparse.ArgumentParser('Prepare Data')
     parser.add_argument('--audio_data_path', dest = 'audio_path', type=str, default=AUDIO_DATA_PATH_DEFAULT, help="Path to audio root folder")
     parser.add_argument('--source_sub_directories', dest = 'sub_directories',type=str, default=SUBDIRECTORIES_DEFAULT, help="Sub directories for data")
     parser.add_argument('--data_cache', dest='data_cache', type=str, default=CACHE_DEFAULT, help="Directory to Store data and meta data.")
+    parser.add_argument('--annotations_path', dest='annotations_path', type=str, default=CSV_PATH_DEFAULT, help='Path to CSV containing gender annotations.')
     parser.add_argument('--train_percent', dest='train_percent', type=int, default=70, help="Percentage for train split")
     parser.add_argument('--test_percent', dest='test_percent', type=int, default=15, help="Percentage for test split")
     parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions if spectrogram mode of tranfer is used")
     parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram'], default='audio', help='Transfer files as raw audio or converted spectrogram.')
+    parser.add_argument('--use_genders', dest='use_genders', type=str, default=['M','F'], help='Genders to include in train set. Pass None if you do not want to check genders.')
     args = parser.parse_args()
 
     for arg in vars(args):
@@ -212,7 +249,7 @@ if __name__ == '__main__':
         for class_id in args.sub_directories:        
             preprocess_dataset_spectrogram(os.path.join(args.audio_path,class_id),class_id,args)
     else:
-        transfer_aligned_audio_raw(args.audio_path,args.sub_directories,args.data_cache,args.train_percent,args.test_percent)
+        transfer_aligned_audio_raw(args.audio_path,args.sub_directories,args.data_cache,args.train_percent,args.test_percent, args.use_genders, args.annotations_path)
 
 
 
