@@ -10,9 +10,19 @@ import soundfile as sf
 import shutil
 import pandas as pd
 
+
+"""
+RESULTS_DEFUALT points to directory with generated clips
+SOURCE_DEFAULT points to directory with the targets
+USE_GENDERS - set to true if separate scores for male and female are required otherwise set to false
+CSV_PATH can be ignored if separate scores for male and female are not required otherwise points to csv with male and female labels for the clips
+
+"""
+
 RESULTS_DEFAULT = '/content/Pix2Pix-VC/results/noise_pix2pix/test_latest/audios/fake_B'
 SOURCE_DEFAULT = '/content/Pix2Pix-VC/data_cache/noisy/test' 
 CSV_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/annotations.csv'
+USE_GENDER = False
 
 STANDARD_LUFS = -23.0
 OVERLAP_DEFAULT = 0.75 
@@ -225,7 +235,7 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_genders=True
     
     male_loss = []
     female_loss = []
-
+    total_loss =[]
 
     for file in os.listdir(source_dir):
         file1 = os.path.join(TEMP_CACHE,file)
@@ -233,26 +243,36 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_genders=True
 
         loss = compute_mssl(file1,file2,[2048, 1024, 512, 256, 128, 64])
 
-        if annotations[file] == 'M':
-            male_loss.append(loss)
+        if USE_GENDER:
+            if annotations[file] == 'M':
+                male_loss.append(loss)
 
+            else:
+                female_loss.append(loss)
         else:
-            female_loss.append(loss)
+            total_loss.append(loss)
+            total_mean = total_loss.mean()
+            total_std = total_loss.std()
 
-        
-    total_loss = np.concatenate((male_loss,female_loss))
+    if USE_GENDER:    
+        total_loss = np.concatenate((male_loss,female_loss))
 
-    total_mean = total_loss.mean()
-    total_std = total_loss.std()
-    male_mean = np.mean(male_loss)
-    male_std = np.std(male_loss)
-    female_mean = np.mean(female_loss)
-    female_std = np.std(female_loss)
+        total_mean = total_loss.mean()
+        total_std = total_loss.std()
+        male_mean = np.mean(male_loss)
+        male_std = np.std(male_loss)
+        female_mean = np.mean(female_loss)
+        female_std = np.std(female_loss)
+        if TEMP_CACHE!=source_dir:
+            shutil.rmtree(TEMP_CACHE)
+        return total_mean, total_std, male_mean, male_std, female_mean, female_std
+    else:
+        if TEMP_CACHE!=source_dir:
+            shutil.rmtree(TEMP_CACHE)
+        return total_mean, total_std, male_mean, male_std, female_mean, female_std
 
-    if TEMP_CACHE!=source_dir:
-        shutil.rmtree(TEMP_CACHE)
 
-    return total_mean, total_std, male_mean, male_std, female_mean, female_std
+    
 
 if __name__ == '__main__':
     print(main())
