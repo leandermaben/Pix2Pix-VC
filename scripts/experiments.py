@@ -2,10 +2,7 @@ import os
 import pandas as pd
 import shutil
 import sys
-
-sys.path.append('/content/Pix2Pix-VC')
-
-from evaluate_lsd import main as lsd
+from metrics.evaluate_lsd import main as lsd
 
 def run(command):
     print(command)
