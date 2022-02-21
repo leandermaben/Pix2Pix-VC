@@ -109,4 +109,6 @@ if __name__ == '__main__':
     # lambda_L1s = [2000]
     # vary_lambdaL1(lambda_L1s ,10,15,[f'pix_noisy_lambdL1_{i}' for i in lambda_L1s], csv_path)
     #run_eval()
+    codecs = ['g726','gsm','ogg','g723_1']
+    use_codecs(codecs , 10, 15, [f'pix_{c}' for c in codecs], csv_path)
     
