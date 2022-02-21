@@ -14,7 +14,7 @@ import pandas as pd
 """
 RESULTS_DEFUALT points to directory with generated clips
 SOURCE_DEFAULT points to directory with the targets
-USE_GENDERS - set to true if separate scores for male and female are required otherwise set to false
+USE_GENDER - set to true if separate scores for male and female are required otherwise set to false
 CSV_PATH can be ignored if separate scores for male and female are not required otherwise points to csv with male and female labels for the clips
 
 """
@@ -207,13 +207,14 @@ def time_and_energy_align(data1, data2, sr):
 
     return data1, data2
 
-def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_genders=True):
+def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_gender=USE_GENDER):
 
-    annotations = {}
-    anno_csv = pd.read_csv(CSV_PATH_DEFAULT)
-    for i in range(len(anno_csv)):
-        row=anno_csv.iloc[i]
-        annotations[row['file']]=row['gender']
+    if use_gender:
+        annotations = {}
+        anno_csv = pd.read_csv(CSV_PATH_DEFAULT)
+        for i in range(len(anno_csv)):
+            row=anno_csv.iloc[i]
+            annotations[row['file']]=row['gender']
 
     #Checking for sample rates
     file_0 = os.listdir(source_dir)[0]
@@ -243,7 +244,7 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_genders=True
 
         loss = compute_mssl(file1,file2,[2048, 1024, 512, 256, 128, 64])
 
-        if USE_GENDER:
+        if use_gender:
             if annotations[file] == 'M':
                 male_loss.append(loss)
 
@@ -254,7 +255,7 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_genders=True
             total_mean = np.mean(total_loss)
             total_std = np.std(total_loss)
 
-    if USE_GENDER:    
+    if use_gender:    
         total_loss = np.concatenate((male_loss,female_loss))
 
         total_mean = total_loss.mean()

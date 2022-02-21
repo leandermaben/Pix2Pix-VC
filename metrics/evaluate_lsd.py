@@ -214,7 +214,7 @@ def norm_and_LSD(file1, file2):
     print("LSD (Spectrogram) between %s, %s = %f" % (file1, file2, calc_LSD_spectrogram(a, b)))
     return calc_LSD_spectrogram(a, b)
 
-def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
+def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_gender = USE_GENDER):
 
     """
     Modified by Leander Maben.
@@ -264,7 +264,7 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
         if min_lsd==lsd:
             min_file=file
 
-        if USE_GENDER:
+        if use_gender:
             if annotations[file] == 'M':
                 male_loss.append(lsd)
 
@@ -277,7 +277,7 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
 
     total_mean = np.mean(total_loss)
     total_std = np.std(total_loss)
-    if USE_GENDER:
+    if use_gender:
         male_mean = np.mean(male_loss)
         male_std = np.std(male_loss)
         female_mean = np.mean(female_loss)
@@ -291,7 +291,7 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
     if TEMP_CACHE!=source_dir:
         shutil.rmtree(TEMP_CACHE)
 
-    if USE_GENDER:
+    if use_gender:
         return total_mean, total_std, male_mean, male_std, female_mean, female_std
     else:
         return total_mean, total_std
