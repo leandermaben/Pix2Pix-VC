@@ -12,6 +12,7 @@ import pickle
 import matplotlib.pyplot as plt
 from util.util import save_pickle
 import soundfile as sf
+from scipy import signal
 
 
 
@@ -144,6 +145,73 @@ def preprocess_dataset_spectrogram(data_path, class_id, args):
     print(f"Total duration of dataset for {class_id} is {info['duration']} seconds")
     print(f"Total clips in dataset for {class_id} is {info['records_count']}")
     print('#'*25)
+
+def AddNoiseFloor(data):
+    frameSz = 128
+    noiseFloor = (np.random.rand(frameSz) - 0.5) * 1e-5
+    numFrame = math.floor(len(data)/frameSz)
+    st = 0
+    et = frameSz-1
+
+    for i in range(numFrame):
+        if(np.sum(np.abs(data[st:et+1])) < 1e-5):
+            data[st:et+1] = data[st:et+1] + noiseFloor
+        st = et + 1
+        et += frameSz
+
+    return data
+
+def time_align(data1, data2, sr):
+    nfft = 256
+    hop_length = 1  # hop_length = win_length or frameSz - overlapSz
+    win_length = 256
+
+    ##Adding small random noise to prevent -Inf problem with Spec
+    data1 = AddNoiseFloor(data1)
+    data2 = AddNoiseFloor(data2)
+
+    ##Pad with silence to make them equal
+    zeros = np.zeros(np.abs((len(data2) - len(data1))), dtype=float)
+    padded = -1
+    if(len(data1) < len(data2)):
+        data1 = np.append(data1, zeros)
+        padded = 1
+    elif(len(data2) < len(data1)):
+        data2 = np.append(data2, zeros)
+        padded = 2
+    
+    
+    # Time Alignment
+    # Cross-Correlation and correction of lag using the spectrograms
+    spec1 = abs(librosa.stft(data1, n_fft=nfft, hop_length=hop_length,
+                             win_length=win_length, window='hamming'))
+    spec2 = abs(librosa.stft(data2, n_fft=nfft, hop_length=hop_length,
+                             win_length=win_length, window='hamming'))
+    energy1 = np.mean(spec1, axis=0)
+    energy2 = np.mean(spec2, axis=0)
+    n = len(energy1)
+
+    corr = signal.correlate(energy2, energy1, mode='same') / np.sqrt(signal.correlate(energy1,
+                                                                                      energy1, mode='same')[int(n/2)] * signal.correlate(energy2, energy2, mode='same')[int(n/2)])
+    delay_arr = np.linspace(-0.5*n/sr, 0.5*n/sr, n).round(decimals=6)
+
+
+    delay = delay_arr[np.argmax(corr)]
+
+    if(delay*sr < 0):
+        to_roll = math.ceil(delay*sr)
+    else:
+        to_roll = math.floor(delay*sr)
+
+    # correcting lag
+    # if both signals were the same length, doesn't matter which one was rolled
+    if(padded == 1 or padded == -1):
+        data1 = np.roll(data1, to_roll)
+    elif(padded == 2):
+        data2 = np.roll(data2, -to_roll)
+
+    return data1, data2
+
 
 def get_filenames(fileNameA):
     """
@@ -318,40 +386,51 @@ def fetch_with_codec(clean_path,codec,data_cache,train_percent,test_percent, use
             if use_genders!='None' and phase!='test':
                 if annotations[file] not in use_genders:
                     continue
+            
             shutil.copyfile(os.path.join(clean_path,fileA),os.path.join(data_cache,'clean',phase,file))
 
             if codec == 'g726':
                 file_orig = os.path.join(data_cache,'clean',phase,file)
                 file_8k = os.path.join(data_cache,'noisy',phase,file[:-4]+'_8k.wav')
                 file_codec = os.path.join(data_cache,'noisy',phase,file[:-4]+'_fmt.wav')
-                file_noisy = os.path.join(data_cache,'noisy',phase,file)
+                file_temp = os.path.join(data_cache,'noisy',phase,file[:-4]+'_temp.wav')
                 run(f'ffmpeg -hide_banner -loglevel error -i {file_orig} -ar 8k -y {file_8k}')
                 run(f'ffmpeg -hide_banner -loglevel error -i {file_8k} -acodec g726 -b:a 16k {file_codec}')
-                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8k -y {file_noisy}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8k -y {file_temp}')
                 os.remove(file_8k)
                 os.remove(file_codec)
             elif codec == 'ogg':
                 file_orig = os.path.join(data_cache,'clean',phase,file)
                 file_codec = os.path.join(data_cache,'noisy',phase,file[:-4]+'_fmt.ogg')
-                file_noisy = os.path.join(data_cache,'noisy',phase,file)
+                file_temp = os.path.join(data_cache,'noisy',phase,file[:-4]+'_temp.wav')
                 run(f'ffmpeg -hide_banner -loglevel error -i {file_orig} -c:a libopus -b:a 4.5k -ar 8000 {file_codec}')
-                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_noisy}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_temp}')
                 os.remove(file_codec)
             elif codec == 'g723_1':
                 file_orig = os.path.join(data_cache,'clean',phase,file)
                 file_codec = os.path.join(data_cache,'noisy',phase,file[:-4]+'_fmt.wav')
-                file_noisy = os.path.join(data_cache,'noisy',phase,file)
+                file_temp = os.path.join(data_cache,'noisy',phase,file[:-4]+'_temp.wav')
                 run(f'ffmpeg -hide_banner -loglevel error -i {file_orig} -acodec g723_1 -b:a 6.3k -ar 8000 {file_codec}')
-                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_noisy}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_temp}')
                 os.remove(file_codec)
             elif codec == 'gsm':
                 file_orig = os.path.join(data_cache,'clean',phase,file)
                 file_codec = os.path.join(data_cache,'noisy',phase,file[:-4]+'_fmt.gsm')
-                file_noisy = os.path.join(data_cache,'noisy',phase,file)
+                file_temp = os.path.join(data_cache,'noisy',phase,file[:-4]+'_temp.wav')
                 run(f'ffmpeg -hide_banner -loglevel error -i {file_orig} -acodec libgsm -b:a 13k -ar 8000 {file_codec}')
-                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_noisy}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_temp}')
                 os.remove(file_codec)
 
+            os.remove(file_orig)
+            data1, _ = librosa.load(file_temp,sr=SAMPLING_RATE)
+            data2, _ = librosa.load(os.path.join(clean_path,fileA),sr=SAMPLING_RATE)
+            data1, data2 = time_align(data1,data2,sr=SAMPLING_RATE)
+
+            sf.write(os.path.join(data_cache,'noisy',phase,file),data1,SAMPLING_RATE)
+            sf.write(os.path.join(data_cache,'clean',phase,file),data2,SAMPLING_RATE)
+            os.remove(file_temp)
+            
+            assert librosa.get_duration(filename=os.path.join(data_cache,'clean',phase,file)) == librosa.get_duration(filename=os.path.join(data_cache,'noisy',phase,file))
             duration=librosa.get_duration(filename=os.path.join(data_cache,'clean',phase,file))
             
             total_duration+=duration

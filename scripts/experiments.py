@@ -74,7 +74,7 @@ def run_eval(checkpoints_dir='/content/Pix2Pix-VC/checkpoints', data_cache='/con
 
 
 def use_codecs(codecs, train_percent, test_percent, names, csv_path, n_epochs=75, n_epochs_decay=25, data_cache='/content/Pix2Pix-VC/data_cache',results_dir='/content/Pix2Pix-VC/results'):
-     """
+    """
     Experiment with different codecs and document lsd scores.
 
     Created by Leander Maben.

@@ -153,7 +153,9 @@ class AudioDataset(BaseDataset):
             self.noisy_comp_dict[nameB] = countB
         self.noisy_specs = list(chain.from_iterable(self.noisy_specs))
         self.noisy_specs_len = len(self.noisy_specs)
+        print(self.clean_specs_len,self.noisy_specs_len)
         assert self.noisy_specs_len == len(self.noisy_spec_paths)
+        assert self.clean_specs_len == self.noisy_specs_len
         del self.no_comps_noisy
 
 
