@@ -139,9 +139,6 @@ if __name__ == '__main__':
             datas.append(data)
         while idx < ds_len:
 
-            if(idx >= opt.num_test):
-                break
-
             model.set_input(datas[idx])
             model.test()
             visuals = model.get_current_visuals()

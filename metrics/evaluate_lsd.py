@@ -11,12 +11,13 @@ import random
 import os
 import soundfile as sf
 import shutil
+import pandas as pd
 #from timeit import default_timer as timer
 
 RESULTS_DEFAULT = '/content/Pix2Pix-VC/results/noise_pix2pix/test_latest/audios/fake_B'
 SOURCE_DEFAULT = '/content/Pix2Pix-VC/data_cache/noisy/test' 
 CSV_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/annotations.csv'
-
+USE_GENDER =False
 
 def calc_LSD_spectrogram(a, b):
     """
@@ -252,6 +253,7 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
 
     male_loss = []
     female_loss = []
+    total_loss = []
 
     for file in os.listdir(source_dir):
         file1 = os.path.join(TEMP_CACHE,file)
@@ -262,32 +264,38 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT):
         if min_lsd==lsd:
             min_file=file
 
-        if annotations[file] == 'M':
-            male_loss.append(lsd)
+        if USE_GENDER:
+            if annotations[file] == 'M':
+                male_loss.append(lsd)
 
-        else:
-            female_loss.append(lsd)
+            else:
+                female_loss.append(lsd)
+        total_loss.append(lsd)
 
-        count+=1
+
     
-    total_loss = np.concatenate((male_loss,female_loss))
 
-    total_mean = total_loss.mean()
-    total_std = total_loss.std()
-    male_mean = np.mean(male_loss)
-    male_std = np.std(male_loss)
-    female_mean = np.mean(female_loss)
-    female_std = np.std(female_loss)
+    total_mean = np.mean(total_loss)
+    total_std = np.std(total_loss)
+    if USE_GENDER:
+        male_mean = np.mean(male_loss)
+        male_std = np.std(male_loss)
+        female_mean = np.mean(female_loss)
+        female_std = np.std(female_loss)
 
-    print(f'Average LSD is {total/count}')
+    print(f'Average LSD is {total_mean}')
     print(f'Min LSD is {min_lsd}')
+    print(f'STD DEV is {total_std}')
     print(f'{min_file} has min LSD')
     
     if TEMP_CACHE!=source_dir:
         shutil.rmtree(TEMP_CACHE)
 
-    return total_mean, total_std, male_mean, male_std, female_mean, female_std
+    if USE_GENDER:
+        return total_mean, total_std, male_mean, male_std, female_mean, female_std
+    else:
+        return total_mean, total_std
 
 
 if __name__ == "__main__":
-    main()
+    print(main())

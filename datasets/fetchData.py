@@ -11,6 +11,7 @@ import librosa
 import pickle
 import matplotlib.pyplot as plt
 from util.util import save_pickle
+import soundfile as sf
 
 """
 Code to transfer audio data from a source folder to a target folder with train and test splits.
@@ -33,8 +34,10 @@ Hence it is recommended to use the 'audio' option for the argument --transfer_mo
 AUDIO_DATA_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/Parallel_speech_data'
 SUBDIRECTORIES_DEFAULT = ['clean','noisy']
 CACHE_DEFAULT = '/content/Pix2Pix-VC/data_cache'
-SAMPLING_RATE = 22050
+SAMPLING_RATE = 8000
 CSV_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/annotations.csv'
+NPY_TRAIN_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/rats_train.npy'
+NPY_TEST_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/rats_valid.npy'
 
 ## mel function inspired from https://github.com/GANtastic3/MaskCycleGAN-VC
 
@@ -229,6 +232,31 @@ def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,test_
         print(f'{male_duration} seconds ({male_clips} clips) of male Audio in {phase}.')
         print(f'{female_duration} seconds ({female_clips} clips) of female Audio in {phase}.')
 
+def fetch_from_npy(train_path,test_path,data_cache, sr=SAMPLING_RATE):
+
+    """
+    Fetch train and test sets saved as npy and save them as audio files in data_cache dir.
+
+    Created by Leander Maben.
+    """
+
+    train_set = np.load(train_path)
+    test_set = np.load(test_path)
+
+    os.makedirs(os.path.join(data_cache,'clean','train'))
+    os.makedirs(os.path.join(data_cache,'clean','test'))
+    os.makedirs(os.path.join(data_cache,'noisy','train'))
+    os.makedirs(os.path.join(data_cache,'noisy','test'))
+
+    for i in range(train_set.shape[0]):
+        sf.write(os.path.join(data_cache,'clean','train',f'{i}_audio.wav'),train_set[i,:,0],sr)
+        sf.write(os.path.join(data_cache,'noisy','train',f'{i}_audio.wav'),train_set[i,:,1],sr)
+
+    for i in range(test_set.shape[0]):
+        sf.write(os.path.join(data_cache,'clean','test',f'{i}_audio.wav'),test_set[i,:,0],sr)
+        sf.write(os.path.join(data_cache,'noisy','test',f'{i}_audio.wav'),test_set[i,:,1],sr)
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Prepare Data')
@@ -239,8 +267,10 @@ if __name__ == '__main__':
     parser.add_argument('--train_percent', dest='train_percent', type=int, default=70, help="Percentage for train split")
     parser.add_argument('--test_percent', dest='test_percent', type=int, default=15, help="Percentage for test split")
     parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions if spectrogram mode of tranfer is used")
-    parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram'], default='audio', help='Transfer files as raw audio or converted spectrogram.')
+    parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram','npy'], default='audio', help='Transfer files as raw audio ,converted spectrogram or from npy files.')
     parser.add_argument('--use_genders', dest='use_genders', type=str, default=['M','F'], help='Genders to include in train set. Pass None if you do not want to check genders.')
+    parser.add_argument('--npy_train_source', dest='npy_train_source', type=str, default=NPY_TRAIN_DEFAULT, help='Path where npy train set is present.')
+    parser.add_argument('--npy_test_source', dest='npy_test_source', type=str, default=NPY_TEST_DEFAULT, help='Path where npy test set is present.')
     args = parser.parse_args()
 
     for arg in vars(args):
@@ -248,8 +278,11 @@ if __name__ == '__main__':
     if args.transfer_mode == 'spectrogram':
         for class_id in args.sub_directories:        
             preprocess_dataset_spectrogram(os.path.join(args.audio_path,class_id),class_id,args)
-    else:
+    elif args.transfer_mode == 'audio':
         transfer_aligned_audio_raw(args.audio_path,args.sub_directories,args.data_cache,args.train_percent,args.test_percent, args.use_genders, args.annotations_path)
+    else:
+        fetch_from_npy(args.npy_train_source, args.npy_test_source,args.data_cache)
+
 
 
 
