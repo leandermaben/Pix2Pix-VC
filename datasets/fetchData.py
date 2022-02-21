@@ -24,11 +24,9 @@ Change AUDIO_DATA_PATH_DEFAULT to point to root dir such that (or use command li
         -sample_0
         -sample_1
 Change CACHE_DEFAULT to the directory where you want data to be stored.
-
 There are 2 options to transfer data -> It can be transferred as audio files or as spectrograms.
 Spectrograms are generated using MelGAN.However, MelGAN performs poorly when converting noisy spectrogram back to audio.
 Hence it is recommended to use the 'audio' option for the argument --transfer_mode (It is already set as default)
-
 """
 
 AUDIO_DATA_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/Parallel_speech_data'
@@ -76,7 +74,6 @@ def preprocess_dataset_spectrogram(data_path, class_id, args):
         data_path (str): Directory containing .wav files of the speaker.
         speaker_id (str): ID of the speaker.
         cache_folder (str, optional): Directory to hold preprocessed data. Defaults to './cache/'.
-
         Modified By Leander Maben.
     """
 
@@ -144,10 +141,8 @@ def get_filenames(fileNameA):
     """
     Custom function for this specific dataset.
     It returns the names of corresponding files in the 2 classes along with the common name by which it should be saved.
-
     Args:
     fileNameA(str) : Filename in the first class
-
     Created By Leander Maben
     """
 
@@ -158,17 +153,14 @@ def get_filenames(fileNameA):
 def transfer_aligned_audio_raw(root_dir,class_ids,data_cache,train_percent,test_percent, use_genders, annotations_path):
     """
     Transfer audio files to a convinient location for processing with train,test,validation split.
-
     Important Note: The splitting of data by percent is based on file numbers and not on cummulative duration
     of clips. Moreover, it does not take into the account the number of clips that are discarded for being less than 1 second long.
-
     Arguments:
     root_dir(str) - Root directory where files of specified classes are present in subdirectories.
     class_id(str) - Current class ID of data objects
     data_cache(str) - Root directory to store data
     train_percent(int) - Percent of data clips in train split
     test_percent(int) - Percent of data clips in test split
-
     Created By Leander Maben. 
     """
 
@@ -236,7 +228,6 @@ def fetch_from_npy(train_path,test_path,data_cache, sr=SAMPLING_RATE):
 
     """
     Fetch train and test sets saved as npy and save them as audio files in data_cache dir.
-
     Created by Leander Maben.
     """
 
@@ -267,7 +258,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_percent', dest='train_percent', type=int, default=70, help="Percentage for train split")
     parser.add_argument('--test_percent', dest='test_percent', type=int, default=15, help="Percentage for test split")
     parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions if spectrogram mode of tranfer is used")
-    parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram','npy'], default='audio', help='Transfer files as raw audio ,converted spectrogram or from npy files.')
+    parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram','npy','codec'], default='audio', help='Transfer files as raw audio ,converted spectrogram or from npy files.')
     parser.add_argument('--use_genders', dest='use_genders', type=str, default=['M','F'], help='Genders to include in train set. Pass None if you do not want to check genders.')
     parser.add_argument('--npy_train_source', dest='npy_train_source', type=str, default=NPY_TRAIN_DEFAULT, help='Path where npy train set is present.')
     parser.add_argument('--npy_test_source', dest='npy_test_source', type=str, default=NPY_TEST_DEFAULT, help='Path where npy test set is present.')
@@ -282,8 +273,3 @@ if __name__ == '__main__':
         transfer_aligned_audio_raw(args.audio_path,args.sub_directories,args.data_cache,args.train_percent,args.test_percent, args.use_genders, args.annotations_path)
     else:
         fetch_from_npy(args.npy_train_source, args.npy_test_source,args.data_cache)
-
-
-
-
-

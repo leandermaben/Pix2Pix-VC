@@ -28,7 +28,7 @@ STANDARD_LUFS = -23.0
 OVERLAP_DEFAULT = 0.75 
 
 MAG_WEIGHT_DEFAULT = 1
-LOGMAG_WEIGHT_DEFAULT = 0
+LOGMAG_WEIGHT_DEFAULT = 1
 
 
 def stft(audio,n_fft,overlap):
@@ -41,7 +41,7 @@ def stft(audio,n_fft,overlap):
     mag_spec = np.abs(comp_spec)
     return mag_spec
 
-def safe_log(self,x, eps=1e-5):
+def safe_log(x, eps=1e-5):
     safe_x = np.where(x <= eps, eps, x)
     return np.log(safe_x)
 
