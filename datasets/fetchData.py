@@ -271,7 +271,11 @@ def fetch_with_codec(clean_path,codec,data_cache,train_percent,test_percent, use
     if codec == 'g726':
         print('Using codec g726 with bit rate 16k')
     elif codec == 'ogg':
-        print('Using codec ogg with bit rate 4.5')
+        print('Using codec ogg with bit rate 4.5k')
+    elif codec == 'g723_1':
+        print('Using codec g723_1 with bit rate 6.3k')
+    elif codec == 'gsm':
+        print('Using codec gsm with bit rate 13k')
 
     if use_genders != 'None':
         annotations = {}
@@ -300,7 +304,7 @@ def fetch_with_codec(clean_path,codec,data_cache,train_percent,test_percent, use
         total_duration=0
         total_clips=0
         
-        if use_genders!='None':
+        if use_genders!='None':git
             male_duration = 0
             female_duration = 0
             male_clips = 0
@@ -333,7 +337,15 @@ def fetch_with_codec(clean_path,codec,data_cache,train_percent,test_percent, use
                 run(f'ffmpeg -hide_banner -loglevel error -i {file_orig} -c:a libopus -b:a 4.5k -ar 8000 {file_codec}')
                 run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_noisy}')
                 os.remove(file_codec)
-            
+            elif codec == 'g723_1':
+                file_orig = os.path.join(data_cache,'clean',phase,file)
+                file_codec = os.path.join(data_cache,'noisy',phase,file[:-4]+'_fmt.wav')
+                file_noisy = os.path.join(data_cache,'noisy',phase,file)
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_orig} -acodec g723_1 -b:a 6.3k -ar 8000 {file_codec}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_noisy}')
+                os.remove(file_codec)
+            elif codec == 'gsm':
+                pass
 
             duration=librosa.get_duration(filename=os.path.join(data_cache,'clean',phase,file))
             
@@ -366,7 +378,7 @@ if __name__ == '__main__':
     parser.add_argument('--npy_train_source', dest='npy_train_source', type=str, default=NPY_TRAIN_DEFAULT, help='Path where npy train set is present.')
     parser.add_argument('--npy_test_source', dest='npy_test_source', type=str, default=NPY_TEST_DEFAULT, help='Path where npy test set is present.')
     parser.add_argument('--codec_clean_path', dest='codec_clean_path', type=str, default=os.path.join(AUDIO_DATA_PATH_DEFAULT,'clean'), help='Path to clean audio files. Only use if --transfer_mode is codec.')
-    parser.add_argument('--codec_name', dest='codec_name', type=str, default='g726', choices=['g726','ogg'], help='Name of codec to be used. Only use if --transfer_mode is codec.')
+    parser.add_argument('--codec_name', dest='codec_name', type=str, default='g726', choices=['g726','ogg', 'g723_1','gsm'], help='Name of codec to be used. Only use if --transfer_mode is codec.')
     args = parser.parse_args()
 
     for arg in vars(args):
