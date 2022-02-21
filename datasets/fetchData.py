@@ -33,9 +33,9 @@ AUDIO_DATA_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/Para
 SUBDIRECTORIES_DEFAULT = ['clean','noisy']
 CACHE_DEFAULT = '/content/Pix2Pix-VC/data_cache'
 SAMPLING_RATE = 8000
-CSV_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/annotations.csv'
-NPY_TRAIN_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/rats_train.npy'
-NPY_TEST_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/rats_valid.npy'
+CSV_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/annotations.csv' #Only if --use_genders is not None.Ignored for --transfer_mode [spectrogram|npy]
+NPY_TRAIN_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/rats_train.npy' #Only if --transfer_mode is npy
+NPY_TEST_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/rats_valid.npy' #Only if --transfer_mode is npy
 
 ## mel function inspired from https://github.com/GANtastic3/MaskCycleGAN-VC
 
@@ -247,21 +247,106 @@ def fetch_from_npy(train_path,test_path,data_cache, sr=SAMPLING_RATE):
         sf.write(os.path.join(data_cache,'clean','test',f'{i}_audio.wav'),test_set[i,:,0],sr)
         sf.write(os.path.join(data_cache,'noisy','test',f'{i}_audio.wav'),test_set[i,:,1],sr)
 
+def fetch_with_codec(clean_path,codec,data_cache,train_percent,test_percent, use_genders, annotations_path):
+    """
+    Transfer audio files to a convinient location for processing with train,test,validation split.
+    Important Note: The splitting of data by percent is based on file numbers and not on cummulative duration
+    of clips. Moreover, it does not take into the account the number of clips that are discarded for being less than 1 second long.
+    Arguments:
+    clean_path(str) - Root directory where files of specified classes are present in subdirectories.
+    codec(str) - Name of codec to be used.
+    data_cache(str) - Root directory to store data. Data is stored in clean and noisy sub-directories.
+    train_percent(int) - Percent of data clips in train split
+    test_percent(int) - Percent of data clips in test split
+    Created By Leander Maben. 
+    """
 
+    if use_genders != 'None':
+        annotations = {}
+        anno_csv = pd.read_csv(annotations_path)
+        for i in range(len(anno_csv)):
+            row=anno_csv.iloc[i]
+            annotations[row['file']]=row['gender']
+
+
+    for class_id in ['clean','noisy']:
+        os.makedirs(os.path.join(data_cache,class_id,'train'))
+        os.makedirs(os.path.join(data_cache,class_id,'test'))
+
+    files_list = [x for x in os.listdir(clean_path) if x[-4:]=='.wav']
+    num_files = len(files_list)
+
+    indices = np.arange(0,num_files)
+    np.random.seed(7)
+    np.random.shuffle(indices)
+
+    train_split = math.floor(train_percent/100*num_files)
+    test_split = math.floor(test_percent/100*num_files)
+
+    for phase,(start, end) in zip(['train','test'],[(0,train_split),(num_files-test_split,num_files)]):
+        
+        total_duration=0
+        total_clips=0
+        
+        if use_genders!='None':
+            male_duration = 0
+            female_duration = 0
+            male_clips = 0
+            female_clips = 0
+
+
+        for i in range(start,end):
+            fileA, _, file=get_filenames(files_list[indices[i]])
+            if librosa.get_duration(filename=os.path.join(clean_path,fileA)) < 1: #Skipping very short files
+                continue
+            if use_genders!='None' and phase!='test':
+                if annotations[file] not in use_genders:
+                    continue
+            shutil.copyfile(os.path.join(clean_path,fileA),os.path.join(data_cache,'clean',phase,file))
+
+            if codec == 'g726':
+                file_orig = os.path.join(data_cache,'clean',phase,file)
+                file_8k = os.path.join(data_cache,'noisy',phase,file[:-4]+'_8k.wav')
+                file_codec = os.path.join(data_cache,'noisy',phase,file[:-4]+'_fmt.wav')
+                file_noisy = os.path.join(data_cache,'noisy',phase,file)
+                os.system(f'ffmpeg -hide_banner -log_level error -i {file_orig} -ar 8k -y {file_8k}')
+                os.system(f'ffmpeg -hide_banner -log_level error -i {file_8k} -acodec g726 -b:a 16k {file_codec}')
+                os.system(f'ffmpeg -hide_banner -log_level error -i {file_codec} -ar 8k -y {file_noisy}')
+                os.remove(file_8k)
+                os.remove(file_codec)
+
+            duration=librosa.get_duration(filename=os.path.join(data_cache,'clean',phase,file))
+            
+            total_duration+=duration
+            total_clips+=1
+
+            if use_genders!='None':
+                if annotations[file] == 'M':
+                    male_clips+=1
+                    male_duration+=duration
+                else:
+                    female_clips+=1
+                    female_duration+=duration
+
+        print(f'{total_duration} seconds ({total_clips} clips) of Audio saved to {phase}.')
+        print(f'{male_duration} seconds ({male_clips} clips) of male Audio in {phase}.')
+        print(f'{female_duration} seconds ({female_clips} clips) of female Audio in {phase}.')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Prepare Data')
     parser.add_argument('--audio_data_path', dest = 'audio_path', type=str, default=AUDIO_DATA_PATH_DEFAULT, help="Path to audio root folder")
     parser.add_argument('--source_sub_directories', dest = 'sub_directories',type=str, default=SUBDIRECTORIES_DEFAULT, help="Sub directories for data")
     parser.add_argument('--data_cache', dest='data_cache', type=str, default=CACHE_DEFAULT, help="Directory to Store data and meta data.")
-    parser.add_argument('--annotations_path', dest='annotations_path', type=str, default=CSV_PATH_DEFAULT, help='Path to CSV containing gender annotations.')
-    parser.add_argument('--train_percent', dest='train_percent', type=int, default=70, help="Percentage for train split")
-    parser.add_argument('--test_percent', dest='test_percent', type=int, default=15, help="Percentage for test split")
-    parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions if spectrogram mode of tranfer is used")
-    parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram','npy','codec'], default='audio', help='Transfer files as raw audio ,converted spectrogram or from npy files.')
-    parser.add_argument('--use_genders', dest='use_genders', type=str, default=['M','F'], help='Genders to include in train set. Pass None if you do not want to check genders.')
+    parser.add_argument('--annotations_path', dest='annotations_path', type=str, default=CSV_PATH_DEFAULT, help='Path to CSV containing gender annotations.Use only if --use_genders is not None.Ignored for --transfer_mode [spectrogram|npy]')
+    parser.add_argument('--train_percent', dest='train_percent', type=int, default=10, help="Percentage for train split.Ignored for --transfer_mode npy.")
+    parser.add_argument('--test_percent', dest='test_percent', type=int, default=15, help="Percentage for test split.Ignored for --transfer_mode npy.")
+    parser.add_argument('--size_multiple', dest='size_multiple', type=int, default=4, help="Required Factor of Dimensions ONLY if spectrogram mode of tranfer is used")
+    parser.add_argument('--transfer_mode', dest='transfer_mode', type=str, choices=['audio','spectrogram','npy','codec'], default='audio', help='Transfer files as raw audio ,converted spectrogram, from npy files or using codec.')
+    parser.add_argument('--use_genders', dest='use_genders', type=str, default=['M','F'], help='Genders to include in train set. Pass None if you do not want to check genders.Ignored for --transfer_mode [spectrogram|npy]')
     parser.add_argument('--npy_train_source', dest='npy_train_source', type=str, default=NPY_TRAIN_DEFAULT, help='Path where npy train set is present.')
     parser.add_argument('--npy_test_source', dest='npy_test_source', type=str, default=NPY_TEST_DEFAULT, help='Path where npy test set is present.')
+    parser.add_argument('--codec_clean_path', dest='codec_clean_path', type=str, default=os.path.join(AUDIO_DATA_PATH_DEFAULT,'clean'), help='Path to clean audio files. Only use if --transfer_mode is codec.')
+    parser.add_argument('--codec_name', dest='codec_name', type=str, default='g726', choices=['g726'], help='Name of codec to be used. Only use if --transfer_mode is codec.')
     args = parser.parse_args()
 
     for arg in vars(args):
@@ -271,5 +356,7 @@ if __name__ == '__main__':
             preprocess_dataset_spectrogram(os.path.join(args.audio_path,class_id),class_id,args)
     elif args.transfer_mode == 'audio':
         transfer_aligned_audio_raw(args.audio_path,args.sub_directories,args.data_cache,args.train_percent,args.test_percent, args.use_genders, args.annotations_path)
-    else:
+    elif args.transfer_mode == 'npy':
         fetch_from_npy(args.npy_train_source, args.npy_test_source,args.data_cache)
+    else:
+        fetch_with_codec(args.codec_clean_path, args.codec_name, args.data_cache, args.train_percent, args.test_percent, args.use_genders, args.annotations_path)
