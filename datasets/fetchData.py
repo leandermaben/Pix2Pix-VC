@@ -13,6 +13,14 @@ import matplotlib.pyplot as plt
 from util.util import save_pickle
 import soundfile as sf
 
+
+
+def run(command):
+    #print(command)
+    exit_status = os.system(command)
+    if exit_status > 0:
+        exit(1)
+
 """
 Code to transfer audio data from a source folder to a target folder with train and test splits.
 Change AUDIO_DATA_PATH_DEFAULT to point to root dir such that (or use command line argument)
@@ -260,6 +268,10 @@ def fetch_with_codec(clean_path,codec,data_cache,train_percent,test_percent, use
     test_percent(int) - Percent of data clips in test split
     Created By Leander Maben. 
     """
+    if codec == 'g726':
+        print('Using codec g726 with bit rate 16k')
+    elif codec == 'ogg':
+        print('Using codec ogg with bit rate 4.5')
 
     if use_genders != 'None':
         annotations = {}
@@ -309,11 +321,19 @@ def fetch_with_codec(clean_path,codec,data_cache,train_percent,test_percent, use
                 file_8k = os.path.join(data_cache,'noisy',phase,file[:-4]+'_8k.wav')
                 file_codec = os.path.join(data_cache,'noisy',phase,file[:-4]+'_fmt.wav')
                 file_noisy = os.path.join(data_cache,'noisy',phase,file)
-                os.system(f'ffmpeg -hide_banner -log_level error -i {file_orig} -ar 8k -y {file_8k}')
-                os.system(f'ffmpeg -hide_banner -log_level error -i {file_8k} -acodec g726 -b:a 16k {file_codec}')
-                os.system(f'ffmpeg -hide_banner -log_level error -i {file_codec} -ar 8k -y {file_noisy}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_orig} -ar 8k -y {file_8k}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_8k} -acodec g726 -b:a 16k {file_codec}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8k -y {file_noisy}')
                 os.remove(file_8k)
                 os.remove(file_codec)
+            elif codec == 'ogg':
+                file_orig = os.path.join(data_cache,'clean',phase,file)
+                file_codec = os.path.join(data_cache,'noisy',phase,file[:-4]+'_fmt.ogg')
+                file_noisy = os.path.join(data_cache,'noisy',phase,file)
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_orig} -c:a libopus -b:a 4.5k -ar 8000 {file_codec}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_noisy}')
+                os.remove(file_codec)
+            
 
             duration=librosa.get_duration(filename=os.path.join(data_cache,'clean',phase,file))
             
@@ -346,7 +366,7 @@ if __name__ == '__main__':
     parser.add_argument('--npy_train_source', dest='npy_train_source', type=str, default=NPY_TRAIN_DEFAULT, help='Path where npy train set is present.')
     parser.add_argument('--npy_test_source', dest='npy_test_source', type=str, default=NPY_TEST_DEFAULT, help='Path where npy test set is present.')
     parser.add_argument('--codec_clean_path', dest='codec_clean_path', type=str, default=os.path.join(AUDIO_DATA_PATH_DEFAULT,'clean'), help='Path to clean audio files. Only use if --transfer_mode is codec.')
-    parser.add_argument('--codec_name', dest='codec_name', type=str, default='g726', choices=['g726'], help='Name of codec to be used. Only use if --transfer_mode is codec.')
+    parser.add_argument('--codec_name', dest='codec_name', type=str, default='g726', choices=['g726','ogg'], help='Name of codec to be used. Only use if --transfer_mode is codec.')
     args = parser.parse_args()
 
     for arg in vars(args):
