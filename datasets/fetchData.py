@@ -304,7 +304,7 @@ def fetch_with_codec(clean_path,codec,data_cache,train_percent,test_percent, use
         total_duration=0
         total_clips=0
         
-        if use_genders!='None':git
+        if use_genders!='None':
             male_duration = 0
             female_duration = 0
             male_clips = 0
@@ -345,7 +345,12 @@ def fetch_with_codec(clean_path,codec,data_cache,train_percent,test_percent, use
                 run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_noisy}')
                 os.remove(file_codec)
             elif codec == 'gsm':
-                pass
+                file_orig = os.path.join(data_cache,'clean',phase,file)
+                file_codec = os.path.join(data_cache,'noisy',phase,file[:-4]+'_fmt.gsm')
+                file_noisy = os.path.join(data_cache,'noisy',phase,file)
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_orig} -acodec libgsm -b:a 13k -ar 8000 {file_codec}')
+                run(f'ffmpeg -hide_banner -loglevel error -i {file_codec} -ar 8000 {file_noisy}')
+                os.remove(file_codec)
 
             duration=librosa.get_duration(filename=os.path.join(data_cache,'clean',phase,file))
             
