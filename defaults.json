@@ -15,6 +15,6 @@
     "mssl_overlap":0.75,
     "mssl_mag_weight":1,
     "mssl_logmag_weight":1,
-    "metrics_temp_cache":"/content/AttentionGAN-VC/temp",
+    "metrics_temp_cache":"/content/Pix2Pix-VC/temp",
     "load_size":128
 }
