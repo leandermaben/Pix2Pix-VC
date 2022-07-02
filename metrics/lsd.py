@@ -12,12 +12,12 @@ import os
 import soundfile as sf
 import shutil
 import pandas as pd
-#from timeit import default_timer as timer
+import json
+ 
+#Loading defaults
 
-RESULTS_DEFAULT = '/content/Pix2Pix-VC/results/noise_pix2pix/test_latest/audios/fake_B'
-SOURCE_DEFAULT = '/content/Pix2Pix-VC/data_cache/noisy/test' 
-CSV_PATH_DEFAULT = '/content/drive/MyDrive/NTU - Speech Augmentation/annotations.csv'
-USE_GENDER =False
+with open('defaults.json','r') as f:
+    defaults = json.load(f)
 
 def calc_LSD_spectrogram(a, b):
     """
@@ -40,7 +40,7 @@ def calc_LSD_spectrogram(a, b):
 
 
 def AddNoiseFloor(data):
-    frameSz = 128
+    frameSz = defaults["fix_w"]
     noiseFloor = (np.random.rand(frameSz) - 0.5) * 1e-5
     numFrame = math.floor(len(data)/frameSz)
     st = 0
@@ -56,9 +56,9 @@ def AddNoiseFloor(data):
 
 
 def time_and_energy_align(data1, data2, sr):
-    nfft = 256
-    hop_length = 1  # hop_length = win_length or frameSz - overlapSz
-    win_length = 256
+    nfft = defaults["nfft"]
+    hop_length = defaults["align_hop"]  # hop_length = win_length or frameSz - overlapSz
+    win_length = defaults["align_win_len"]
 
     ##Adding small random noise to prevent -Inf problem with Spec
     data1 = AddNoiseFloor(data1)
@@ -175,10 +175,10 @@ def normalize(sig1, sig2):
 
 
 def norm_and_LSD(file1, file2):
-    nfft = 256
-    overlapSz = 128
-    frameSz = 256
-    eps = 1e-9
+    nfft = defaults["nfft"]
+    overlapSz = defaults["norm_overlap"]
+    frameSz = defaults["norm_frameSz"]
+    eps = defaults["lsd_eps"]
 
     #normalizing
     
@@ -214,14 +214,14 @@ def norm_and_LSD(file1, file2):
     print("LSD (Spectrogram) between %s, %s = %f" % (file1, file2, calc_LSD_spectrogram(a, b)))
     return calc_LSD_spectrogram(a, b)
 
-def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_gender = USE_GENDER):
+def main(source_dir=defaults["test_source"],results_dir=defaults["test_results"], use_gender = defaults["use_gender_test"],csv_path=defaults["annotations"]):
 
     """
     Modified by Leander Maben.
     
     """
     annotations = {}
-    anno_csv = pd.read_csv(CSV_PATH_DEFAULT)
+    anno_csv = pd.read_csv(csv_path)
     for i in range(len(anno_csv)):
         row=anno_csv.iloc[i]
         annotations[row['file']]=row['gender']
@@ -242,7 +242,7 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_gender = USE
 
     if file1_rate!=file2_rate:
         ## Storing original audios in a new temp cache with desired sample_rate
-        TEMP_CACHE = '/content/temp'
+        TEMP_CACHE = defaults["metrics_temp_cache"]
         os.makedirs(TEMP_CACHE)
         for file in os.listdir(source_dir):
             file1 = os.path.join(source_dir,file)
@@ -272,8 +272,6 @@ def main(source_dir=SOURCE_DEFAULT,results_dir=RESULTS_DEFAULT, use_gender = USE
                 female_loss.append(lsd)
         total_loss.append(lsd)
 
-
-    
 
     total_mean = np.mean(total_loss)
     total_std = np.std(total_loss)

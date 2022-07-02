@@ -51,7 +51,7 @@ def save_audio(opt, visuals_list, img_path):
     Borrowed from https://github.com/shashankshirol/GeneratingNoisySpeechData
     """
 
-    results_dir = os.path.join(opt.results_dir, opt.name, '{}_{}'.format(opt.phase, opt.epoch))
+    results_dir = os.path.join(opt.results_dir, opt.name, '{}_{}'.format(opt.split, opt.epoch))
     img_dir = os.path.join(results_dir, 'audios')
     short_path = ntpath.basename(img_path[0])
     name = os.path.splitext(short_path)[0]
