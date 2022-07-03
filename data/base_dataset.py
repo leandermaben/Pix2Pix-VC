@@ -92,7 +92,7 @@ def get_transform(opt, params=None, grayscale=False, method=Image.BICUBIC, conve
     if grayscale:
         transform_list.append(transforms.Grayscale(1))
     if 'resize' in opt.preprocess:
-        osize = [opt.load_size, opt.load_size]
+        osize = (opt.load_size, opt.load_size)
         transform_list.append(CustResize(osize))
     elif 'scale_width' in opt.preprocess:
         transform_list.append(transforms.Lambda(lambda img: __scale_width(img, opt.load_size, opt.crop_size, method)))

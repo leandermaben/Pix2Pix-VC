@@ -94,6 +94,7 @@ class AudioDataset(BaseDataset):
 
     def __init__(self,opt):
         BaseDataset.__init__(self,opt)
+        print(f'Creating Dataset with {opt.split}')
         self.dir_A = os.path.join(opt.dataroot,opt.class_ids[0],opt.split)
         self.dir_B = os.path.join(opt.dataroot,opt.class_ids[1],opt.split)
         self.A_paths = sorted(make_dataset(self.dir_A, opt.max_dataset_size))

@@ -58,7 +58,7 @@ def apsipa_exp(names,csv_path,sources, data_cache='/content/Pix2Pix-VC/data_cach
         print('#'*25)
         print(f'Training {name} with Data from {source}')
         shutil.copytree(os.path.join('/content/drive/MyDrive/APSIPA/Data_Sources',source),data_cache)
-        run(f'python train.py --dataroot data_cache --name {name} --model pix2pix --direction AtoB --input_nc 1 --output_nc 1 --batch_size 4 --lambda_L1 200 --netG resnet_9blocks --dataset_mode audio --n_epochs 200 --n_epochs_decay 200 --preprocess resize --checkpoints_dir /content/drive/MyDrive/APSIPA/Results/checkpoints --no_html')
+        # run(f'python train.py --dataroot data_cache --name {name} --model pix2pix --direction AtoB --input_nc 1 --output_nc 1 --batch_size 4 --lambda_L1 200 --netG resnet_9blocks --dataset_mode audio --n_epochs 200 --n_epochs_decay 200 --preprocess resize --checkpoints_dir /content/drive/MyDrive/APSIPA/Results/checkpoints --no_html')
         
         info = validate(name, epochs, data_cache, results_dir)
         for metric in ['min_lsd_epoch','min_mssl_epoch']:
@@ -90,8 +90,8 @@ if __name__ == '__main__':
         df.to_csv(csv_path,index=False)
     
 
-    sources = ['Parallel/TIMIT_Helicopter','Parallel/TIMIT_Cabin','Parallel/Codec2']
-    apsipa_exp([f'Pix2Pix_{i}' for i in ['pl_helicopter','pl_cabin','pl_cd2']],csv_path,sources)
+    sources = ['Parallel/TIMIT_Helicopter']
+    apsipa_exp([f'Pix2Pix_{i}' for i in ['pl_helicopter']],csv_path,sources)
     
 
 
