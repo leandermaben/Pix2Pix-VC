@@ -29,8 +29,8 @@ def validate(name, epochs, data_cache, results_dir):
 
     for epoch in epochs:
         run(f'python test.py --dataroot data_cache  --split val --name {name} --model pix2pix --direction AtoB --netG resnet_9blocks  --input_nc 1 --output_nc 1 --dataset_mode audio --checkpoints_dir /content/drive/MyDrive/APSIPA/Results/checkpoints --save_dir {results_dir} --epoch {epoch}')
-        avg_lsd,std_lsd = lsd(os.path.join(data_cache,'noisy','val'),os.path.join(results_dir,name,'audios',f'val_{epoch}','fake_B'),use_gender=False)
-        avg_mssl,std_mssl = mssl(os.path.join(data_cache,'noisy','val'),os.path.join(results_dir,name,'audios',f'val_{epoch}','fake_B'),use_gender=False)
+        avg_lsd,std_lsd = lsd(os.path.join(data_cache,'noisy','val'),os.path.join(results_dir,name,f'val_{epoch}','audios','fake_B'),use_gender=False)
+        avg_mssl,std_mssl = mssl(os.path.join(data_cache,'noisy','val'),os.path.join(results_dir,name,f'val_{epoch}','audios','fake_B'),use_gender=False)
 
         info['avg_val_lsd'].append(avg_lsd)
         info['std_val_lsd'].append(std_lsd)
@@ -64,8 +64,8 @@ def apsipa_exp(names,csv_path,sources, data_cache='/content/Pix2Pix-VC/data_cach
         for metric in ['min_lsd_epoch','min_mssl_epoch']:
             epoch = info[metric]
             run(f'python test.py --dataroot data_cache --name {name} --model pix2pix --direction AtoB --netG resnet_9blocks  --input_nc 1 --output_nc 1 --dataset_mode audio --checkpoints_dir /content/drive/MyDrive/APSIPA/Results/checkpoints --save_dir {results_dir} --epoch {epoch}')
-            info[f'avg_test_lsd_{metric}'],info[f'std_test_lsd_{metric}'] = lsd(os.path.join(data_cache,'noisy',f'test_{epoch}','test'),os.path.join(results_dir,name,'audios','fake_B'),use_gender=False)
-            info[f'avg_test_mssl_{metric}'],info[f'std_test_mssl_{metric}'] = mssl(os.path.join(data_cache,'noisy',f'test_{epoch}','test'),os.path.join(results_dir,name,'audios','fake_B'),use_gender=False)
+            info[f'avg_test_lsd_{metric}'],info[f'std_test_lsd_{metric}'] = lsd(os.path.join(data_cache,'noisy',f'test_{epoch}','test'),os.path.join(results_dir,name,f'test_{epoch}','audios','fake_B'),use_gender=False)
+            info[f'avg_test_mssl_{metric}'],info[f'std_test_mssl_{metric}'] = mssl(os.path.join(data_cache,'noisy',f'test_{epoch}','test'),os.path.join(results_dir,name,f'test_{epoch}','audios','fake_B'),use_gender=False)
 
             if info['min_mssl_epoch'] == info['min_lsd_epoch']:
                 info['avg_test_lsd_min_mssl_epoch'] = info['avg_test_lsd_min_lsd_epoch']
